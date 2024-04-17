@@ -7,25 +7,16 @@
 int msgq_id;
 void clearResources(int);
 
-
 typedef struct msgbuff
 {
     long mtype;
     Process msg_process;
 } msgbuff;
 
-void sendProcessToScheduler(Process p) 
-{
-    msgbuff message;
-    message.mtype = 1;
-    message.msg_process = p;
-    sendval = msgsnd(msgq_id, &message, sizeof(message.msg_process), !IPC_NOWAIT);
-
-    if (sendval == -1)
-    {
-        perror("Error in sending to scheduler");
-    }
-}
+void sendProcessToScheduler(Process p);
+void getUserInput(int &algorithm, int &parameter);
+void createScheduler(int algorithm, int parameter);
+void createClock();
 
 int main(int argc, char *argv[])
 {
@@ -33,7 +24,11 @@ int main(int argc, char *argv[])
     // TODO Initialization
     // 1. Read the input files.
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
+    int algorithm, parameter;
+    getUserInput(algorithm, parameter);
     // 3. Initiate and create the scheduler and clock processes.
+    createScheduler();
+    createClock();
     // 4. Use this function after creating the clock process to initialize clock
     initClk();
     // To get time use this
@@ -55,9 +50,6 @@ int main(int argc, char *argv[])
     }
     printf("Message queue id = %d\n", msgq_id);
 
-   
-    
-    
     // 7. Clear clock resources
     destroyClk(true);
 }
@@ -67,4 +59,55 @@ void clearResources(int signum)
     // TODO Clears all resources in case of interruption
     struct msqid_ds ctl_statud_ds;
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
+}
+
+void sendProcessToScheduler(Process p)
+{
+    msgbuff message;
+    message.mtype = 1;
+    message.msg_process = p;
+    sendval = msgsnd(msgq_id, &message, sizeof(message.msg_process), !IPC_NOWAIT);
+
+    if (sendval == -1)
+    {
+        perror("Error in sending to scheduler");
+    }
+}
+
+void getUserInput(int &algorithm, int &parameter)
+{
+    scanf("Please Enter the type of the algoritm: \n 1: HPF \n 2: SRTN \n 3: RR %d", &algorithm);
+    if (algorithm == 3)
+        scanf("Please Enter the time step: %d", &parameter);
+}
+
+void createScheduler(int algorithm, int parameter)
+{
+    int pid = fork();
+    if (pid == -1)
+        perror("Error in forking a process!");
+    else if (pid == 0)
+    {
+        char arg1[10], arg2[10];
+        sprintf(arg1, "%d", algorithm);
+        sprintf(arg2, "%d", parameter);
+        execl("./scheduler", "scheduler", arg1, arg2, NULL);
+    }
+    else
+    {
+    }
+}
+
+void createClock()
+{
+    int pid = fork();
+    if (pid == -1)
+        perror("Error in forking a process!");
+    else if (pid == 0)
+    {
+        execl("./clk", "clk", NULL);
+    }
+    else
+    {
+    }
 }
