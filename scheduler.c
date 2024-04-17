@@ -1,5 +1,6 @@
 #include "headers.h"
 #include "Queue.h"
+#include "PriorityQueue.h"
 
 typedef struct Process
 {
@@ -14,6 +15,7 @@ typedef struct Process
 } Process;
 
 void switchProcess(Process p);
+void HPF();
 
 int main(int argc, char * argv[])
 {
@@ -36,4 +38,9 @@ void switchProcess(Process* p)
     runningProcess->state = 1;
     runningProcess = p;
     runningProcess->state = 2;
+}
+
+void HPF() 
+{
+
 }
