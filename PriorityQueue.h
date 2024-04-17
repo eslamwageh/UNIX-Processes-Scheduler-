@@ -78,7 +78,7 @@ Process* priority_queue_remove(PriorityQueuePointer PQ)
 {                                                   // Remove the first item
     if (priority_queue_empty(PQ)) {
         printf("Cannot remove item from empty priority queue.\n");     // If the priority queue is empty, print error message
-        return -1;
+        return NULL;
     }
     else {
         Process* Item;                                                              // Save the item
