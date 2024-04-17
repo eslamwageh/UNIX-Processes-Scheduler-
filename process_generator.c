@@ -1,4 +1,5 @@
 #include "headers.h"
+#include "PriorityQueue.h"
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
@@ -6,16 +7,25 @@
 int msgq_id;
 void clearResources(int);
 
-struct process
-{
-    int id, arrival, runtime, priority;
-};
 
-struct msgbuff
+typedef struct msgbuff
 {
     long mtype;
-    struct process msg_process;
-};
+    Process msg_process;
+} msgbuff;
+
+void sendProcessToScheduler(Process p) 
+{
+    msgbuff message;
+    message.mtype = 1;
+    message.msg_process = p;
+    sendval = msgsnd(msgq_id, &message, sizeof(message.msg_process), !IPC_NOWAIT);
+
+    if (sendval == -1)
+    {
+        perror("Error in sending to scheduler");
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -45,20 +55,9 @@ int main(int argc, char *argv[])
     }
     printf("Message queue id = %d\n", msgq_id);
 
-    struct msgbuff message;
-    struct process p;
-    message.mtype = 7;
-    p.id = 1;
-    p.arrival = 0;
-    p.runtime = 10;
-    p.priority = 2;
-    message.msg_process = p;
-    sendval = msgsnd(msgq_id, &message, sizeof(message.msg_process), !IPC_NOWAIT);
-
-    if (sendval == -1)
-    {
-        perror("Error in sending to scheduler");
-    }
+   
+    
+    
     // 7. Clear clock resources
     destroyClk(true);
 }

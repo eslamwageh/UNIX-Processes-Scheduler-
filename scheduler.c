@@ -76,7 +76,7 @@ void HPF(PriorityQueuePointer readyQueue, Process* runningProcess)
         }
         else 
         {
-            signal(SIGUSR1, processFinishedHandler);
+            signal(SIGCHlD, processFinishedHandler);
             int statlock;
             int cid = wait(&statlock); // to ensure that it waits for the running process to finish
             if (WIFEXITED(statlock))
