@@ -13,8 +13,12 @@ typedef struct msgbuff
     Process msg_process;
 } msgbuff;
 
+int sendval;
+Process *processes;
+
+
 void sendProcessToScheduler(Process p);
-void getUserInput(int &algorithm, int &parameter);
+void getUserInput(int *algorithm, int *parameter);
 void createScheduler(int algorithm, int parameter);
 void createClock();
 
@@ -25,9 +29,9 @@ int main(int argc, char *argv[])
     // 1. Read the input files.
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     int algorithm, parameter;
-    getUserInput(algorithm, parameter);
+    getUserInput(&algorithm, &parameter);
     // 3. Initiate and create the scheduler and clock processes.
-    createScheduler();
+    createScheduler(algorithm, parameter);
     createClock();
     // 4. Use this function after creating the clock process to initialize clock
     initClk();
@@ -38,7 +42,6 @@ int main(int argc, char *argv[])
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     key_t key_id;
-    int sendval;
 
     key_id = ftok("pgen_sch_keyfile", 65);
     msgq_id = msgget(key_id, 0666 | IPC_CREAT);
@@ -74,11 +77,11 @@ void sendProcessToScheduler(Process p)
     }
 }
 
-void getUserInput(int &algorithm, int &parameter)
+void getUserInput(int *algorithm, int *parameter)
 {
-    scanf("Please Enter the type of the algoritm: \n 1: HPF \n 2: SRTN \n 3: RR %d", &algorithm);
+    scanf("Please Enter the type of the algoritm: \n 1: HPF \n 2: SRTN \n 3: RR %d", algorithm);
     if (algorithm == 3)
-        scanf("Please Enter the time step: %d", &parameter);
+        scanf("Please Enter the time step: %d", parameter);
 }
 
 void createScheduler(int algorithm, int parameter)
@@ -110,4 +113,60 @@ void createClock()
     else
     {
     }
+}
+
+void readInputFile()
+{
+    FILE *file = fopen("processes.txt", "r");
+    if (file == NULL)
+    {
+        perror("Error in opening the file");
+        exit(-1);
+    }
+    // loop to know the number of lines
+    int lines = -1;
+    char ch;
+    while (!feof(file))
+    {
+        // ignore line starting with #
+        fscanf(file, "%c", &ch);
+        if (ch == '#')
+        {
+            while (ch != '\n')
+                fscanf(file, "%c", &ch);
+            continue;
+        }
+        if (ch == '\n')
+            lines++;
+    }
+    rewind(file);
+    processes = (Process *)malloc(lines * sizeof(Process));
+    int id, arrivalTime, runTime, priority;
+    for (int i = 0; i < lines; i++)
+    {
+        fscanf(file, "%c", &ch);
+        if (ch == '#')
+        {
+            while (ch != '\n')
+                fscanf(file, "%c", &ch);
+        }
+        else
+            ungetc(ch, file);
+        fscanf(file, "%d %d %d %d", &id, &arrivalTime, &runTime, &priority);
+        processes[i] = _createProcess(id, arrivalTime, runTime, priority);
+    }
+
+    
+}
+
+Process _createProcess(int id, int arrivalTime, int runTime, int priority)
+{
+    Process p;
+    p.id = id;
+    p.arrivalTime = arrivalTime;
+    p.runTime = runTime;
+    p.executionTime = 0;
+    p.remainingTime = runTime;
+    p.priority = priority;
+    return p;
 }
