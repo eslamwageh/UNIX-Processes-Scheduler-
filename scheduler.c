@@ -2,19 +2,9 @@
 #include "Queue.h"
 #include "PriorityQueue.h"
 
-typedef struct Process
-{
-    int id;
-    int priority;
-    int arrivalTime;
-    int runTime;
-    int executionTime;
-    int remainingTime;
-    int waitingTime;
-    int state; // 0: waiting, 1: ready, 2: running 
-} Process;
 
-void switchProcess(Process* p);
+
+void switchProcess(Process* runningProcess, Process* p);
 void HPF();
 
 int main(int argc, char * argv[])
@@ -34,7 +24,7 @@ int main(int argc, char * argv[])
     destroyClk(true);
 }
 
-void switchProcess(Process* p)
+void switchProcess(Process* runningProcess, Process* p)
 {
     runningProcess->state = 1;
     runningProcess = p;
