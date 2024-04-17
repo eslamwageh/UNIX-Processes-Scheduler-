@@ -1,6 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+typedef struct Process
+{
+    int id;
+    int priority;
+    int arrivalTime;
+    int runTime;
+    int executionTime;
+    int remainingTime;
+    int waitingTime;
+    int state; // 0: waiting, 1: ready, 2: running 
+} Process;
 
 #define MAXCOUNT 10000
 typedef struct PriorityQueue* PriorityQueuePointer;
@@ -8,7 +19,7 @@ typedef struct PriorityQueue* PriorityQueuePointer;
 // Do appropiate typedefs and structs
 typedef struct PQNodeTag
 {
-    int Item;
+    Process* Item;
     struct PQNodeTag* Link;
 } PQNode;
 
@@ -37,9 +48,11 @@ int priority_queue_full(PriorityQueuePointer PQ)
     return (PQ->Count == MAXCOUNT);
 }
 
-PQNode* priority_queue_sorted_insert(int Item, PQNode *P)
+PQNode* priority_queue_sorted_insert(Process* Item, PQNode *P, int priorityType) //priorityType: 0 -> remTime, 1 -> priority
 {        // Add the item to the correct position
-    if ((P == NULL) || (Item >= P->Item)) {             // If the ItemList is empty or the inserted Item is greater than current Item,
+    int mode = priorityType ? Item->priority : Item->remainingTime;
+    int comaparator = priorityType ? P->Item->priority : P->Item->remainingTime
+    if ((P == NULL) || (mode >= comaparator)) {             // If the IemList is empty or the inserted Item is greater than current Item,
         PQNode *N;                                      // Create a new node N and initialize it
         N = malloc(sizeof(PQNode));
         N->Item = Item;
@@ -47,28 +60,28 @@ PQNode* priority_queue_sorted_insert(int Item, PQNode *P)
         return N;                                       // Return N
     }
     else {                                              // Else,
-        P->Link = priority_queue_sorted_insert(Item, P->Link);          // Call priority_queue_sorted_insert with the next node instead
+        P->Link = priority_queue_sorted_insert(Item, P->Link, priorityType);          // Call priority_queue_sorted_insert with the next node instead
         return P;                                       // Return P
     }
 }
 
-void priority_queue_insert(int Item, PriorityQueuePointer PQ)
+void priority_queue_insert(Process* Item, PriorityQueuePointer PQ, int priorityType)
 {                            // Insert an item to the priority queue
     if (priority_queue_full(PQ)) printf("Cannot add item(Queue is full).\n");        // If the queue is full, print error message
     else {                                                              // Else,
         ++(PQ->Count);                                                  // Raise the item counter
-        PQ->ItemList = priority_queue_sorted_insert(Item, PQ->ItemList);                // Add the item to the correct position
+        PQ->ItemList = priority_queue_sorted_insert(Item, PQ->ItemList, priorityType);                // Add the item to the correct position
     }
 }
 
-int priority_queue_remove(PriorityQueuePointer PQ)
+Process* priority_queue_remove(PriorityQueuePointer PQ)
 {                                                   // Remove the first item
     if (priority_queue_empty(PQ)) {
         printf("Cannot remove item from empty priority queue.\n");     // If the priority queue is empty, print error message
         return -1;
     }
     else {
-        int Item;                                                              // Save the item
+        Process* Item;                                                              // Save the item
         Item = PQ->ItemList->Item;
 
         PQNode *Temp;                                                               // Create a Temp node to save the memory address
