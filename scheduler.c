@@ -14,7 +14,7 @@ typedef struct Process
     int state; // 0: waiting, 1: ready, 2: running 
 } Process;
 
-void switchProcess(Process p);
+void switchProcess(Process* p);
 void HPF();
 
 int main(int argc, char * argv[])
@@ -26,6 +26,7 @@ int main(int argc, char * argv[])
     Process staticProcess = (Process){0, 0, 0, 0, 0, 0, 0}; // this is temporary for now as we dont have input file yet
     Process* runningProcess = &staticProcess;
     Process** PCBTable = malloc(numberOfProcesses * sizeof(Process*));
+    PriorityQueuePointer readyQueue = priority_queue_init();
 
 
     //upon termination release the clock resources.
@@ -42,5 +43,8 @@ void switchProcess(Process* p)
 
 void HPF() 
 {
-
+    while (!priority_queue_empty) 
+    {
+        
+    }
 }
