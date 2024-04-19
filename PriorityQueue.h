@@ -51,7 +51,7 @@ int priority_queue_full(PriorityQueuePointer PQ)
 PQNode* priority_queue_sorted_insert(Process* Item, PQNode *P, int priorityType) //priorityType: 0 -> remTime, 1 -> priority
 {        // Add the item to the correct position
     int mode = priorityType ? Item->priority : Item->remainingTime;
-    int comaparator = priorityType ? P->Item->priority : P->Item->remainingTime
+    int comaparator = priorityType ? P->Item->priority : P->Item->remainingTime;
     if ((P == NULL) || (mode >= comaparator)) {             // If the IemList is empty or the inserted Item is greater than current Item,
         PQNode *N;                                      // Create a new node N and initialize it
         N = malloc(sizeof(PQNode));

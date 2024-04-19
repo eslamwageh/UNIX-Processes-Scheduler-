@@ -1,13 +1,12 @@
 #include "headers.h"
-#include "Queue.h"
 #include "PriorityQueue.h"
 
 int time;
 Process **PCBTable;
 Process *runningProcess;
 
-void switchProcess(Process *&runningProcess, Process *p);
-void HPF(PriorityQueuePointer readyQueue, Process *&runningProcess);
+void switchProcess(Process **runningProcess, Process *p);
+void HPF(PriorityQueuePointer readyQueue, Process **runningProcess);
 void processFinishedHandler(int signum);
 void deleteProcess();
 
@@ -43,17 +42,17 @@ int main(int argc, char *argv[])
     destroyClk(true);
 }
 
-void switchProcess(Process *&runningProcess, Process *p)
+void switchProcess(Process **runningProcess, Process *p)
 {
     if (p == NULL)
         return;
-    if (runningProcess)
-        runningProcess->state = 1;
-    runningProcess = p;
-    runningProcess->state = 2;
+    if (*runningProcess)
+        (*runningProcess)->state = 1;
+    *runningProcess = p;
+    (*runningProcess)->state = 2;
 }
 
-void HPF(PriorityQueuePointer readyQueue, Process *&runningProcess)
+void HPF(PriorityQueuePointer readyQueue, Process **runningProcess)
 {
     while (!priority_queue_empty(readyQueue))
     {
@@ -61,22 +60,22 @@ void HPF(PriorityQueuePointer readyQueue, Process *&runningProcess)
         {
         };
         time = getClk();
-        if (!runningProcess)
+        if (!(*runningProcess))
         {
-            switchProcess(runningProcess, priority_queue_remove(readyQueue));
+            switchProcess((*runningProcess), priority_queue_remove(readyQueue));
             int pid = fork();
             if (pid == -1)
                 perror("Error in forking a process!");
             else if (pid == 0)
             {
                 char arg1[10], arg2[10], arg3[10], arg4[10], arg5[10], arg6[10], arg7[10];
-                sprintf(arg1, "%d", runningProcess->id);
-                sprintf(arg2, "%d", runningProcess->priority);
-                sprintf(arg3, "%d", runningProcess->runTime);
-                sprintf(arg4, "%d", runningProcess->executionTime);
-                sprintf(arg5, "%d", runningProcess->remainingTime);
-                sprintf(arg6, "%d", runningProcess->waitingTime);
-                sprintf(arg7, "%d", runningProcess->state);
+                sprintf(arg1, "%d", (*runningProcess)->id);
+                sprintf(arg2, "%d", (*runningProcess)->priority);
+                sprintf(arg3, "%d", (*runningProcess)->runTime);
+                sprintf(arg4, "%d", (*runningProcess)->executionTime);
+                sprintf(arg5, "%d", (*runningProcess)->remainingTime);
+                sprintf(arg6, "%d", (*runningProcess)->waitingTime);
+                sprintf(arg7, "%d", (*runningProcess)->state);
                 execl("./process", "process", arg1, arg2, arg3, arg4, arg5, arg6, arg7, NULL);
             }
             else

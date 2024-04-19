@@ -14,19 +14,28 @@ typedef struct msgbuff
 } msgbuff;
 
 int sendval;
+int processesCount = -1;
 Process *processes;
 
-
+void readInputFile();
+Process _createProcess(int id, int arrivalTime, int runTime, int priority);
 void sendProcessToScheduler(Process p);
 void getUserInput(int *algorithm, int *parameter);
 void createScheduler(int algorithm, int parameter);
 void createClock();
+
 
 int main(int argc, char *argv[])
 {
     signal(SIGINT, clearResources);
     // TODO Initialization
     // 1. Read the input files.
+    readInputFile();
+    //! testing reading the file
+    // for (int i = 0; i < processesCount; i++)
+    // {
+    //     printf("Process %d: id = %d, arrivalTime = %d, runTime = %d, priority = %d\n", i, processes[i].id, processes[i].arrivalTime, processes[i].runTime, processes[i].priority);
+    // }
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     int algorithm, parameter;
     getUserInput(&algorithm, &parameter);
@@ -124,7 +133,6 @@ void readInputFile()
         exit(-1);
     }
     // loop to know the number of lines
-    int lines = -1;
     char ch;
     while (!feof(file))
     {
@@ -137,12 +145,12 @@ void readInputFile()
             continue;
         }
         if (ch == '\n')
-            lines++;
+            processesCount++;
     }
     rewind(file);
-    processes = (Process *)malloc(lines * sizeof(Process));
+    processes = (Process *)malloc(processesCount * sizeof(Process));
     int id, arrivalTime, runTime, priority;
-    for (int i = 0; i < lines; i++)
+    for (int i = 0; i < processesCount; i++)
     {
         fscanf(file, "%c", &ch);
         if (ch == '#')
