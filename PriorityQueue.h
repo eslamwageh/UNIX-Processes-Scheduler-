@@ -4,13 +4,16 @@
 typedef struct Process
 {
     int id;
+    int pid;
     int priority;
     int arrivalTime;
     int runTime;
     int executionTime;
     int remainingTime;
     int waitingTime;
-    int state; // 0: waiting, 1: ready, 2: running 
+    int lastStoppedTime;
+    int state; //0: created, 1: stopped, 2: resumed
+
 } Process;
 
 #define MAXCOUNT 10000
@@ -71,6 +74,21 @@ void priority_queue_insert(Process* Item, PriorityQueuePointer PQ, int priorityT
     else {                                                              // Else,
         ++(PQ->Count);                                                  // Raise the item counter
         PQ->ItemList = priority_queue_sorted_insert(Item, PQ->ItemList, priorityType);                // Add the item to the correct position
+    }
+}
+
+void insert_into_tail(Process* Item, PriorityQueuePointer PQ)
+{
+    PQNode *N;                                      // Create a new node N and initialize it
+    N = malloc(sizeof(PQNode));
+    N->Item = Item;
+    N->Link = NULL;                                 // N points to NULL because it is the last item
+    PQNode *P = PQ->ItemList;
+    if (P == NULL) PQ->ItemList = N;
+    else
+    {
+        while (P->Link != NULL) P = P->Link;
+        P->Link = N;
     }
 }
 
