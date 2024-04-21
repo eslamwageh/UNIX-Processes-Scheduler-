@@ -42,6 +42,15 @@ int main(int argc, char *argv[])
     // 3. Initiate and create the scheduler and clock processes.
     createScheduler(algorithm, parameter);
     createClock();
+    int ptr = 0;
+    while (ptr < processesCount)
+    {
+        if (getClk() == processes[ptr].arrivalTime)
+        {
+            sendProcessToScheduler(processes[ptr]);
+            ptr++;
+        }
+    }
     // 4. Use this function after creating the clock process to initialize clock
     initClk();
     // To get time use this
