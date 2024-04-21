@@ -87,6 +87,7 @@ void sendProcessToScheduler(Process p)
     msgbuff message;
     message.mtype = 1;
     message.msg_process = p;
+    kill(getppid(), SIGUSR2);
     sendval = msgsnd(msgq_id, &message, sizeof(message.msg_process), !IPC_NOWAIT);
 
     if (sendval == -1)

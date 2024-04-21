@@ -13,7 +13,7 @@ int totalProcesses = 0;
 int totalExecutionTime = 0;
 
 Process **PCBTable;
-Process **runningProcess;
+Process *runningProcess;
 PriorityQueuePointer readyQueue;
 
 typedef struct msgbuff
@@ -34,6 +34,7 @@ void createPerfFile();
 
 int main(int argc, char *argv[])
 {
+    signal(SIGCHLD, processFinishedHandler);
     initClk();
     time = -1;
     // TODO implement the scheduler :)
@@ -55,6 +56,8 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
+
+    
     signal(SIGUSR2, receiveProcess);
     switch (algorithm)
     {
@@ -105,19 +108,12 @@ void HPF(PriorityQueuePointer readyQueue, Process **runningProcess)
                 perror("Error in forking a process!");
             else if (pid == 0)
             {
-                char arg1[10], arg2[10], arg3[10], arg4[10], arg5[10], arg6[10], arg7[10];
-                sprintf(arg1, "%d", (*runningProcess)->id);
-                sprintf(arg2, "%d", (*runningProcess)->priority);
-                sprintf(arg3, "%d", (*runningProcess)->runTime);
-                sprintf(arg4, "%d", (*runningProcess)->executionTime);
-                sprintf(arg5, "%d", (*runningProcess)->remainingTime);
-                sprintf(arg6, "%d", (*runningProcess)->waitingTime);
-                sprintf(arg7, "%d", (*runningProcess)->state);
-                execl("./process", "process", arg1, arg2, arg3, arg4, arg5, arg6, arg7, NULL);
+                char arg1[10];
+                sprintf(arg1, "%d", (*runningProcess)->remainingTime);
+                execl("./process", "process", arg1, NULL);
             }
             else
             {
-                signal(SIGCHLD, processFinishedHandler);
                 int statlock;
                 int cid = wait(&statlock); // to ensure that it waits for the running process to finish
                 if (WIFEXITED(statlock))
@@ -133,29 +129,47 @@ void RR(PriorityQueuePointer readyQueue, int timeQuantum)
 {
     while (!priority_queue_empty(readyQueue))
     {
-        *runningProcess = priority_queue_remove(readyQueue);
+        runningProcess = priority_queue_remove(readyQueue);
+        if (runningProcess->state == 0)
+        {
+            int pid = fork();
+            if (pid == -1)
+                perror("Error in forking a process!");
+            else if (pid == 0)
+            {
+                char arg1[10];
+                sprintf(arg1, "%d", runningProcess->remainingTime);
+                execl("./process", "process", arg1, NULL);
+            }
+            else
+            {
+                runningProcess->pid = pid;
+            }
+        }
         writeToLogFile(0);
-        Process *p = *runningProcess;
+        runningProcess->state = 2;
+        Process *p = runningProcess;
         p->waitingTime += time - p->lastStoppedTime;
         int remainingTime = timeQuantum;
+        kill(p->pid, SIGUSR1);
         while (remainingTime > 0)
         {
             while (time == getClk());
             time = getClk();
-            kill(p->pid, SIGUSR1);
             p->remainingTime--;
             if (p->remainingTime == 0)
             {
-                writeToLogFile(2);
                 p->state = 3;
                 break;
             }
             remainingTime--;
         }
+        kill(p->pid, SIGUSR2);
         if (p->remainingTime > 0)
         {
             insert_into_tail(readyQueue, p);
             p->lastStoppedTime = time;
+            p->state = 1;
             writeToLogFile(1);
         }
         else
@@ -182,37 +196,22 @@ void receiveProcess(int signum)
     {
         totalProcesses++;
         totalExecutionTime += p->runTime;
-        int pid = fork();
-        if (pid == -1)
+        p->state = 0;
+        p->lastStoppedTime = time;
+        PCBTable[p->id] = p;
+        switch (algorithm)
         {
-            perror("error in fork");
+        case 1:
+            priority_queue_insert(p, readyQueue, 1);
+            break;
+        case 2:
+            priority_queue_insert(p, readyQueue, 0);
+            break;
+        case 3:
+            insert_into_tail(readyQueue, p);
+            break;
         }
-        if(pid == 0)
-        {
-            char timeStr[10];
-            snprintf(timeStr, sizeof(timeStr), "%d", p->remainingTime); 
-            execl("./process", "process", timeStr, NULL);
-        }
-        else
-        {
-            p->pid = pid;
-            p->state = 0;
-            p->lastStoppedTime = time;
-            PCBTable[p->id] = p;
-            switch (algorithm)
-            {
-            case 1:
-                priority_queue_insert(p, readyQueue, 1);
-                break;
-            case 2:
-                priority_queue_insert(p, readyQueue, 0);
-                break;
-            case 3:
-                insert_into_tail(readyQueue, p);
-                break;
-            }
-        }
-
+    
     }
 }
 
@@ -227,19 +226,19 @@ void writeToLogFile(int state)
     switch (state)
     {
     case 0:
-        if((*runningProcess)->state == 0)
-            fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", time, (*runningProcess)->id, (*runningProcess)->arrivalTime, (*runningProcess)->runTime, (*runningProcess)->remainingTime, (*runningProcess)->waitingTime);
+        if((runningProcess)->state == 0)
+            fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", time, (runningProcess)->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
         else
-            fprintf(logFile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", time, (*runningProcess)->id, (*runningProcess)->arrivalTime, (*runningProcess)->runTime, (*runningProcess)->remainingTime, (*runningProcess)->waitingTime);
+            fprintf(logFile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", time, runningProcess->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
         break;
     case 1:
-        fprintf(logFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", time, (*runningProcess)->id, (*runningProcess)->arrivalTime, (*runningProcess)->runTime, (*runningProcess)->remainingTime, (*runningProcess)->waitingTime);
+        fprintf(logFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", time, runningProcess->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
         break;
     case 2:
-        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time, (*runningProcess)->id, (*runningProcess)->arrivalTime, (*runningProcess)->runTime, (*runningProcess)->remainingTime, (*runningProcess)->waitingTime, time - (*runningProcess)->arrivalTime, (float)(time - (*runningProcess)->arrivalTime) / (*runningProcess)->runTime);
-        totalWTA += (float)(time - (*runningProcess)->arrivalTime) / (*runningProcess)->runTime;
-        totalWTA2 += pow((float)(time - (*runningProcess)->arrivalTime) / (*runningProcess)->runTime, 2);
-        totalWaitingTime += (*runningProcess)->waitingTime;
+        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time, runningProcess->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime, time - runningProcess->arrivalTime, (float)(time - runningProcess->arrivalTime) / runningProcess->runTime);
+        totalWTA += (float)(time - (runningProcess)->arrivalTime) / (runningProcess)->runTime;
+        totalWTA2 += pow((float)(time - (runningProcess)->arrivalTime) / (runningProcess)->runTime, 2);
+        totalWaitingTime += (runningProcess)->waitingTime;
         break;
     }
     fclose(logFile);
@@ -247,6 +246,7 @@ void writeToLogFile(int state)
 
 void processFinishedHandler(int signum)
 {
+    writeToLogFile(2);
     deleteProcess();
 }
 
@@ -267,7 +267,6 @@ void createPerfFile()
 
 void deleteProcess()
 {
-
-    free(PCBTable[(*runningProcess)->id]);
-    *runningProcess = NULL;
+    free(PCBTable[runningProcess->id]);
+    runningProcess = NULL;
 }

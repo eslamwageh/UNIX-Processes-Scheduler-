@@ -12,7 +12,7 @@ typedef struct Process
     int remainingTime;
     int waitingTime;
     int lastStoppedTime;
-    int state; //0: created, 1: stopped, 2: resumed
+    int state; //0: created, 1: stopped, 2: resumed, 3: finished
 
 } Process;
 
