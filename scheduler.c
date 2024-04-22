@@ -1,5 +1,6 @@
 #include "headers.h"
 #include "PriorityQueue.h"
+#include "math.h"
 
 int time;
 int algorithm;
@@ -11,6 +12,7 @@ float totalWTA2 = 0; // sum of WTA^2 to calculate the standard deviation
 int totalWaitingTime = 0;
 int totalProcesses = 0;
 int totalExecutionTime = 0;
+FILE *logFile;
 
 Process **PCBTable;
 Process *runningProcess;
@@ -23,7 +25,7 @@ typedef struct msgbuff
 } msgbuff;
 
 void switchProcess(Process **runningProcess, Process *p);
-void HPF(PriorityQueuePointer readyQueue, Process **runningProcess);
+void HPF(PriorityQueuePointer readyQueue);
 void processFinishedHandler(int signum);
 void deleteProcess();
 void RR(PriorityQueuePointer readyQueue, int timeQuantum);
@@ -35,13 +37,16 @@ void createPerfFile();
 int main(int argc, char *argv[])
 {
     signal(SIGCHLD, processFinishedHandler);
+    signal(SIGUSR2, receiveProcess);
+
     initClk();
+    logFile = fopen("scheduler.log", "a");
     time = -1;
     // TODO implement the scheduler :)
-    int numberOfProcesses = 100;
-    algorithm = atoi(argv[1]);                                // 1 -> HPF, 2 -> SRTN, 3 -> RR
-    Process staticProcess = (Process){0, 0, 0, 0, 0, 0, 0}; // this is temporary for now as we dont have input file yet
-    runningProcess = &staticProcess;
+    int numberOfProcesses = atoi(argv[3]);
+    algorithm = atoi(argv[1]);
+    int timeQuantum = atoi(argv[2]); // 1 -> HPF, 2 -> SRTN, 3 -> RR
+    runningProcess = NULL;
     PCBTable = malloc(numberOfProcesses * sizeof(Process *));
     readyQueue = priority_queue_init();
 
@@ -56,30 +61,27 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-
-    
-    signal(SIGUSR2, receiveProcess);
     switch (algorithm)
     {
     case 1:
-        HPF(readyQueue, runningProcess);
+        HPF(readyQueue);
         break;
     case 2:
         /* SRTN */
         break;
     case 3:
-        RR(readyQueue, atoi(argv[2]));
+        RR(readyQueue, timeQuantum);
         break;
 
     default:
         break;
     }
+    fclose(logFile);
     createPerfFile();
     // upon termination release the clock resources.
 
     destroyClk(true);
 }
-
 
 // no longer 3arf eh lazmet el function de
 void switchProcess(Process **runningProcess, Process *p)
@@ -92,7 +94,7 @@ void switchProcess(Process **runningProcess, Process *p)
     (*runningProcess)->state = 2;
 }
 
-void HPF(PriorityQueuePointer readyQueue, Process **runningProcess)
+void HPF(PriorityQueuePointer readyQueue)
 {
     while (!priority_queue_empty(readyQueue))
     {
@@ -100,17 +102,17 @@ void HPF(PriorityQueuePointer readyQueue, Process **runningProcess)
         {
         };
         time = getClk();
-        if (!(*runningProcess))
+        if (!(runningProcess))
         {
-            switchProcess((*runningProcess), priority_queue_remove(readyQueue));
+            switchProcess((&runningProcess), priority_queue_remove(readyQueue));
             int pid = fork();
             if (pid == -1)
                 perror("Error in forking a process!");
             else if (pid == 0)
             {
                 char arg1[10];
-                sprintf(arg1, "%d", (*runningProcess)->remainingTime);
-                execl("./process", "process", arg1, NULL);
+                sprintf(arg1, "%d", (runningProcess)->remainingTime);
+                execl("./process.out", "process", arg1, NULL);
             }
             else
             {
@@ -139,7 +141,7 @@ void RR(PriorityQueuePointer readyQueue, int timeQuantum)
             {
                 char arg1[10];
                 sprintf(arg1, "%d", runningProcess->remainingTime);
-                execl("./process", "process", arg1, NULL);
+                execl("./process.out", "process", arg1, NULL);
             }
             else
             {
@@ -154,7 +156,8 @@ void RR(PriorityQueuePointer readyQueue, int timeQuantum)
         kill(p->pid, SIGUSR1);
         while (remainingTime > 0)
         {
-            while (time == getClk());
+            while (time == getClk())
+                ;
             time = getClk();
             p->remainingTime--;
             if (p->remainingTime == 0)
@@ -167,14 +170,10 @@ void RR(PriorityQueuePointer readyQueue, int timeQuantum)
         kill(p->pid, SIGUSR2);
         if (p->remainingTime > 0)
         {
-            insert_into_tail(readyQueue, p);
+            insert_into_tail(p, readyQueue);
             p->lastStoppedTime = time;
             p->state = 1;
             writeToLogFile(1);
-        }
-        else
-        {
-            free(p);
         }
     }
 }
@@ -194,6 +193,7 @@ void receiveProcess(int signum)
     }
     else
     {
+        printf("recieved with arrival time : %d", p->arrivalTime);
         totalProcesses++;
         totalExecutionTime += p->runTime;
         p->state = 0;
@@ -208,16 +208,14 @@ void receiveProcess(int signum)
             priority_queue_insert(p, readyQueue, 0);
             break;
         case 3:
-            insert_into_tail(readyQueue, p);
+            insert_into_tail(p, readyQueue);
             break;
         }
-    
     }
 }
 
 void writeToLogFile(int state)
 {
-    FILE *logFile = fopen("scheduler.log", "a");
     if (logFile == NULL)
     {
         perror("Error in opening the log file");
@@ -226,7 +224,7 @@ void writeToLogFile(int state)
     switch (state)
     {
     case 0:
-        if((runningProcess)->state == 0)
+        if ((runningProcess)->state == 0)
             fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", time, (runningProcess)->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
         else
             fprintf(logFile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", time, runningProcess->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
@@ -241,7 +239,6 @@ void writeToLogFile(int state)
         totalWaitingTime += (runningProcess)->waitingTime;
         break;
     }
-    fclose(logFile);
 }
 
 void processFinishedHandler(int signum)
