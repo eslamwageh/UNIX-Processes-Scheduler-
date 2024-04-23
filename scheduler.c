@@ -25,6 +25,7 @@ typedef struct msgbuff
 } msgbuff;
 
 void switchProcess(Process **runningProcess, Process *p);
+void SRTN();
 void HPF(PriorityQueuePointer readyQueue);
 void processFinishedHandler(int signum);
 void deleteProcess();
@@ -68,6 +69,7 @@ int main(int argc, char *argv[])
         break;
     case 2:
         /* SRTN */
+        SRTN();
         break;
     case 3:
         RR(readyQueue, timeQuantum);
@@ -93,6 +95,13 @@ void switchProcess(Process **runningProcess, Process *p)
     *runningProcess = p;
     (*runningProcess)->state = 2;
 }
+
+
+
+void SRTN(){
+
+}
+
 
 void HPF(PriorityQueuePointer readyQueue)
 {
