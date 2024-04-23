@@ -65,3 +65,13 @@ void destroyClk(bool terminateAll)
         killpg(getpgrp(), SIGINT);
     }
 }
+
+
+int getMessageQueueID(char* filename , char code){
+    int messageQueueID = msgget(ftok(filename,code),0666|IPC_CREAT);
+    if(messageQueueID == -1){
+        perror("Can't create Message Queue\n");
+        exit(-1);
+    }
+    return messageQueueID;
+}
