@@ -172,7 +172,7 @@ void RR(PriorityQueuePointer readyQueue, int timeQuantum)
                 printf("remaning quantum is %d, remaining time is %d, current time is %d\n", remainingTime, p->remainingTime, getClk());
                 time = getClk();
                 p->remainingTime--;
-                kill(p->pid, SIGUSR1);
+                kill(p->pid, SIGCONT);
                 if (p->remainingTime == 0)
                     break;
                 remainingTime--;
