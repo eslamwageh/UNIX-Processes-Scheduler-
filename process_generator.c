@@ -62,22 +62,43 @@ int main(int argc, char *argv[])
         perror("Error in creating the queue");
         exit(-1);
     }
-    printf("Message queue id =    %d\n", msgq_id);
+
+    printf("Message queue id = %d\n", msgq_id);
+    fflush(stdout);
 
     int ptr = 0;
-    printf("mohammed");
-    printf("arrival of first process is : %d", processes[ptr].arrivalTime);
     while (ptr < processesCount)
     {
-        if (getClk() - x == processes[ptr].arrivalTime)
+        //! ************************************************************************************************
+        //! ************************************************************************************************
+        //! **********************Don't forget to handle processes arriving at the same time****************
+        //! ************************************************************************************************
+        //! ************************************************************************************************
+        if (getClk() == processes[ptr].arrivalTime)
         {
             sendProcessToScheduler(processes[ptr]);
             ptr++;
+            printf("pointer is %d\n", ptr);
+            fflush(stdout);
         }
     }
+    printf("all processes sent\n");
+
+    int statlock;
+    int cid = waitpid(schedPid, &statlock, 0);
+    if (WIFEXITED(statlock))
+        printf("Scheduler terminated successfully with status %d.", WEXITSTATUS(statlock));
+    else
+        printf("Something went wrong with the scheduler.\n");
+    
+    fflush(stdout);
 
     // 7. Clear clock resources
     destroyClk(true);
+
+    // 8. Clear message queue resources
+    clearResources(0);
+    return 0;
 }
 
 void clearResources(int signum)
@@ -89,29 +110,40 @@ void clearResources(int signum)
 
 void sendProcessToScheduler(Process p)
 {
-    printf("mohammed");
+    printf("sending process to scheduler\n");
+    fflush(stdout);
     msgbuff message;
     message.mtype = 1;
     message.msg_process = p;
     kill(schedPid, SIGUSR2);
+    printf("sent signal to scheduler\n");
+    fflush(stdout);
     sendval = msgsnd(msgq_id, &message, sizeof(p), !IPC_NOWAIT);
-
+    fflush(stdout);
     if (sendval == -1)
     {
         perror("Error in sending to scheduler");
+        fflush(stdout);
     }
     else
     {
-        printf("sent a process to scheduler with id = %d", message.msg_process.id);
+        printf("sent a process to scheduler with id = %d\n", message.msg_process.id);
+        fflush(stdout);
     }
+    fflush(stdout);
 }
 
 void getUserInput(int *algorithm, int *parameter)
 {
-    printf("Please Enter the type of the algoritm: \n 1: HPF \n 2: SRTN \n 3: RR");
-    scanf("Please Enter the type of the algoritm: \n 1: HPF \n 2: SRTN \n 3: RR %d", algorithm);
+    printf("Please Enter the type of the algoritm: \n1: HPF \n2: SRTN \n3: RR\n");
+    fflush(stdout);
+    scanf("%d", algorithm);
     if (*algorithm == 3)
-        scanf("Please Enter the time step: %d", parameter);
+    {
+        printf("Please Enter the time quantum: \n");
+        fflush(stdout);
+        scanf("%d", parameter);
+    }
 }
 
 void createScheduler(int algorithm, int parameter)
@@ -130,12 +162,15 @@ void createScheduler(int algorithm, int parameter)
     else
     {
         schedPid = pid;
-        printf("sched pid is %d", schedPid);
+        printf("sched pid is %d\n", schedPid);
+        fflush(stdout);
     }
 }
 
 void createClock()
 {
+    printf("before clk fork\n");
+    fflush(stdout);
     int pid = fork();
     if (pid == -1)
         perror("Error in forking a process!");
@@ -198,6 +233,8 @@ Process _createProcess(int id, int arrivalTime, int runTime, int priority)
     p.runTime = runTime;
     p.executionTime = 0;
     p.remainingTime = runTime;
+    p.waitingTime = 0;
+    p.state = 0;
     p.priority = priority;
     return p;
 }

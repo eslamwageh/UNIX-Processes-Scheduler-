@@ -78,19 +78,28 @@ void priority_queue_insert(Process* Item, PriorityQueuePointer PQ, int priorityT
 }
 
 void insert_into_tail(Process* Item, PriorityQueuePointer PQ)
-{
-    PQNode *N;                                      // Create a new node N and initialize it
-    N = malloc(sizeof(PQNode));
-    N->Item = Item;
-    N->Link = NULL;                                 // N points to NULL because it is the last item
-    PQNode *P = PQ->ItemList;
-    if (P == NULL) PQ->ItemList = N;
-    else
-    {
-        while (P->Link != NULL) P = P->Link;
-        P->Link = N;
+{                            
+    if (priority_queue_full(PQ)) 
+        printf("Cannot add item(Queue is full).\n");        
+    else {                                                              
+        ++(PQ->Count);                                                  
+        PQNode *N;                                      
+        N = malloc(sizeof(PQNode));
+        N->Item = Item;
+        N->Link = NULL;                                    
+        if (PQ->ItemList == NULL) {             
+            PQ->ItemList = N;                                    
+        }
+        else {                                              
+            PQNode *temp = PQ->ItemList;
+            while (temp->Link != NULL) {          
+                temp = temp->Link;
+            }
+            temp->Link = N;                                       
+        }
     }
 }
+
 
 Process* priority_queue_remove(PriorityQueuePointer PQ)
 {                                                   // Remove the first item
