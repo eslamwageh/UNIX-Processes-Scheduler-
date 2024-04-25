@@ -5,6 +5,7 @@
 
 int time;
 int algorithm;
+int notBusy;
 int msgq_id1, msgq_id2;
 bool finished = false;
 
@@ -46,7 +47,7 @@ int main(int argc, char *argv[])
     signal(SIGUSR1, allProcessesSentHandler);
     signal(SIGUSR2, receiveProcess);
     initClk();
-    logFile = fopen("scheduler.log", "a");
+    logFile = fopen("scheduler.log", "w");
     time = -1;
     // TODO implement the scheduler :)
     totalProcesses = atoi(argv[3]);
@@ -64,8 +65,6 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     printf("Message queue id =    %d\n", msgq_id1);
-
-    sleep(100);
 
     switch (algorithm)
     {
@@ -98,50 +97,57 @@ int main(int argc, char *argv[])
 // no longer 3arf eh lazmet el function de
 void switchProcess(Process **runningProcess, Process *p)
 {
+    bool firstTime = false;
+    if (*runningProcess == NULL)
+        firstTime = true;
     if (p == NULL)
         return;
     if (*runningProcess)
         (*runningProcess)->state = 1;
     *runningProcess = p;
-    (*runningProcess)->state = 2;
+    if (!firstTime)
+        (*runningProcess)->state = 2;
 }
 
 void SRTN()
 {
 }
 
-void HPF(PriorityQueuePointer readyQueue)
+void HPF()
 {
     while (!finished)
     {
-        while (!priority_queue_empty(readyQueue))
+        while (!isHeapEmpty(readyQueue))
         {
+            printHeap(readyQueue);
             while (time == getClk())
             {
             };
             time = getClk();
             if (!(runningProcess))
             {
-                switchProcess((&runningProcess), priority_queue_remove(readyQueue));
-                // int pid = fork();
-                // if (pid == -1)
-                //     perror("Error in forking a process!");
-                // else if (pid == 0)
-                // {
-                //     char arg1[10];
-                //     sprintf(arg1, "%d", (runningProcess)->remainingTime);
-                //     execl("./process.out", "process", arg1, NULL);
-                // }
-                // else
-                // {
-                //     kill(pid, SIGCONT);
-                //     int statlock;
-                //     int cid = wait(&statlock); // to ensure that it waits for the running process to finish
-                //     if (WIFEXITED(statlock))
-                //         printf("A process terminated successfully with status %d.", WEXITSTATUS(statlock));
-                //     else
-                //         printf("Some thing went wrong with the process.");
-                // }
+                switchProcess((&runningProcess), popFromHeap(readyQueue));
+                runningProcess->waitingTime = time - runningProcess->arrivalTime;
+                writeToLogFile(0);
+                int pid = fork();
+                if (pid == -1)
+                    perror("Error in forking a process!");
+                else if (pid == 0)
+                {
+                    char arg1[10];
+                    sprintf(arg1, "%d", (runningProcess)->remainingTime);
+                    execl("./process.out", "process", arg1, NULL);
+                }
+                else
+                {
+                    int statlock;
+                    int cid = wait(&statlock); // to ensure that it waits for the running process to finish
+                    if (WIFEXITED(statlock))
+                        printf("A process terminated successfully with status %d.", WEXITSTATUS(statlock));
+                    else
+                        printf("Some thing went wrong with the process.");
+                    fflush(stdout);
+                }
             }
         }
     }
@@ -232,7 +238,7 @@ void receiveProcess(int signum)
         switch (algorithm)
         {
         case 1:
-            // pushInHeap(readyQueue, p);
+            pushInHeap(readyQueue, p);
             printf("pushed in heap\n");
             fflush(stdout);
             break;
@@ -247,7 +253,7 @@ void receiveProcess(int signum)
 
         printf("minHeap\n");
         fflush(stdout);
-        printHeap(readyQueue);
+        // printHeap(readyQueue);
 
         // print ready queue content
         // for (int i = 0; i < rrReadyQueue->Count; i++)
@@ -274,15 +280,15 @@ void writeToLogFile(int state)
     {
     case 0:
         if ((runningProcess)->state == 0)
-            printf("At time %d process %d started arr %d total %d remain %d wait %d\n", time, (runningProcess)->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
+            fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", time, (runningProcess)->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
         else
-            printf("At time %d process %d resumed arr %d total %d remain %d wait %d\n", time, runningProcess->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
+            fprintf(logFile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", time, runningProcess->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
         break;
     case 1:
-        printf("At time %d process %d stopped arr %d total %d remain %d wait %d\n", time, runningProcess->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
+        fprintf(logFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", time, runningProcess->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime);
         break;
     case 2:
-        printf("At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time, runningProcess->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime, time - runningProcess->arrivalTime, (float)(time - runningProcess->arrivalTime) / runningProcess->runTime);
+        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time + 1, runningProcess->id, runningProcess->arrivalTime, runningProcess->runTime, runningProcess->remainingTime, runningProcess->waitingTime, time - runningProcess->arrivalTime + 1, (float)(time - runningProcess->arrivalTime + 1) / runningProcess->runTime);
         totalWTA += (float)(time - (runningProcess)->arrivalTime) / (runningProcess)->runTime;
         totalWTA2 += pow((float)(time - (runningProcess)->arrivalTime) / (runningProcess)->runTime, 2);
         totalWaitingTime += (runningProcess)->waitingTime;
@@ -293,6 +299,7 @@ void writeToLogFile(int state)
 void processFinishedHandler(int signum)
 {
     totalProcessesFinished++;
+    runningProcess->remainingTime = 0;
     writeToLogFile(2);
     deleteProcess();
     signal(SIGCHLD, processFinishedHandler);
@@ -306,7 +313,8 @@ void createPerfFile()
         perror("Error in opening the performance file");
         exit(-1);
     }
-    fprintf(perfFile, "CPU utilization = %f\n", (float)totalExecutionTime / time);
+    time = getClk();
+    fprintf(perfFile, "CPU utilization = %f\n", (float)totalExecutionTime / (time - notBusy));
     fprintf(perfFile, "Avg WTA = %f\n", totalWTA / totalProcesses);
     fprintf(perfFile, "Std WTA = %f\n", sqrt((totalWTA2 / totalProcesses) - pow(totalWTA / totalProcesses, 2)));
     fprintf(perfFile, "Avg Waiting = %f\n", (float)totalWaitingTime / totalProcesses);
