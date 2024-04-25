@@ -4,7 +4,8 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
-int msgq_id;
+int msgq_id1;
+int msgq_id2;
 void clearResources(int);
 
 typedef struct msgbuff
@@ -51,12 +52,15 @@ int main(int argc, char *argv[])
     // To get time use this
     int x = getClk();
     printf("current time is %d\n", x);
+    fflush(stdout);
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
-    
-    msgq_id = getMessageQueueID("pgen_sch_keyfile",65);
-    printf("Message queue id =    %d\n", msgq_id);
+
+    msgq_id1 = getMessageQueueID("pgen_sch_keyfile", 65);
+    msgq_id2 = getMessageQueueID("pgen_sch_keyfile", 66);
+    printf("Message queue id =    %d\n", msgq_id1);
+    fflush(stdout);
 
     int ptr = 0;
     while (ptr < processesCount)
@@ -72,9 +76,12 @@ int main(int argc, char *argv[])
             ptr++;
             printf("pointer is %d\n", ptr);
             fflush(stdout);
+            fflush(stdout);
         }
     }
     printf("all processes sent\n");
+    fflush(stdout);
+    kill(schedPid, SIGUSR1);
 
     int statlock;
     int cid = waitpid(schedPid, &statlock, 0);
@@ -82,9 +89,12 @@ int main(int argc, char *argv[])
         printf("Scheduler terminated successfully with status %d.", WEXITSTATUS(statlock));
     else
         printf("Something went wrong with the scheduler.\n");
-    
+
     fflush(stdout);
 
+    // i think clear resources should be before destroy clock as destroy clock(true)
+    // terminates all the processes including process generator so it will no be able
+    // to continue to clear recources
     // 7. Clear clock resources
     destroyClk(true);
 
@@ -97,7 +107,8 @@ void clearResources(int signum)
 {
     // TODO Clears all resources in case of interruption
     struct msqid_ds ctl_statud_ds;
-    msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0);
+    msgctl(msgq_id1, IPC_RMID, (struct msqid_ds *)0);
+    msgctl(msgq_id2, IPC_RMID, (struct msqid_ds *)0);
     kill(-getpgrp(), SIGKILL);
 }
 
@@ -111,7 +122,7 @@ void sendProcessToScheduler(Process p)
     kill(schedPid, SIGUSR2);
     printf("sent signal to scheduler\n");
     fflush(stdout);
-    sendval = msgsnd(msgq_id, &message, sizeof(p), !IPC_NOWAIT);
+    sendval = msgsnd(msgq_id1, &message, sizeof(p), !IPC_NOWAIT);
     fflush(stdout);
     if (sendval == -1)
     {
@@ -121,6 +132,12 @@ void sendProcessToScheduler(Process p)
     else
     {
         printf("sent a process to scheduler with id = %d\n", message.msg_process.id);
+        fflush(stdout);
+    }
+    int recval = msgrcv(msgq_id2, &message, sizeof(message.msg_process), 1, !IPC_NOWAIT);
+    if (recval != -1)
+    {
+        printf("Acknowledged\n");
         fflush(stdout);
     }
     fflush(stdout);
@@ -143,7 +160,10 @@ void createScheduler(int algorithm, int parameter)
 {
     int pid = fork();
     if (pid == -1)
+    {
         perror("Error in forking a process!");
+        fflush(stdout);
+    }
     else if (pid == 0)
     {
         char arg1[10], arg2[10], arg3[10];
@@ -170,6 +190,7 @@ void createClock()
     else if (pid == 0)
     {
         printf("cc");
+        fflush(stdout);
         execl("./clk.out", "clk", NULL);
     }
     else
@@ -180,18 +201,19 @@ void createClock()
 void readInputFile()
 {
     FILE *file = fopen("processes.txt", "r");
-    int id , arrivaltime , runtime , priority;
+    int id, arrivaltime, runtime, priority;
     char line[100];
-    fgets(line,sizeof(line),file);
+    fgets(line, sizeof(line), file);
     while (fscanf(file, "%d\t%d\t%d\t%d\n", &id, &arrivaltime, &runtime, &priority) == 4)
         processesCount++;
     fclose(file);
-    file = fopen("processes.txt","r");
-    fgets(line,sizeof(line),file);
+    file = fopen("processes.txt", "r");
+    fgets(line, sizeof(line), file);
     processes = (Process *)malloc(processesCount * sizeof(Process));
-    for(int i = 0 ; i < processesCount;i++){
+    for (int i = 0; i < processesCount; i++)
+    {
         fscanf(file, "%d %d %d %d", &id, &arrivaltime, &runtime, &priority);
-        processes[i] = _createProcess(id,arrivaltime,runtime,priority);
+        processes[i] = _createProcess(id, arrivaltime, runtime, priority);
     }
 }
 
