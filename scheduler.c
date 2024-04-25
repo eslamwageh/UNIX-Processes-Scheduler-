@@ -1,10 +1,12 @@
 #include "headers.h"
 #include "PriorityQueue.h"
 #include "math.h"
+#include "MinHeap.h"
 
 int time;
 int algorithm;
-int msgq_id;
+int msgq_id1, msgq_id2;
+bool finished = false;
 
 // Statistics
 float totalWTA = 0;
@@ -17,7 +19,8 @@ FILE *logFile;
 
 Process **PCBTable;
 Process *runningProcess;
-PriorityQueuePointer readyQueue;
+priority_queue *readyQueue;
+PriorityQueuePointer rrReadyQueue;
 
 typedef struct msgbuff
 {
@@ -27,10 +30,11 @@ typedef struct msgbuff
 
 void switchProcess(Process **runningProcess, Process *p);
 void SRTN();
-void HPF(PriorityQueuePointer readyQueue);
+void HPF();
 void processFinishedHandler(int signum);
+void allProcessesSentHandler(int signum);
 void deleteProcess();
-void RR(PriorityQueuePointer readyQueue, int timeQuantum);
+void RR(int timeQuantum);
 void receiveProcess(int signum);
 
 void writeToLogFile(int state); // 0 -> runs, 1 -> stops, 2 -> finishes
@@ -39,6 +43,7 @@ void createPerfFile();
 int main(int argc, char *argv[])
 {
     signal(SIGCHLD, processFinishedHandler);
+    signal(SIGUSR1, allProcessesSentHandler);
     signal(SIGUSR2, receiveProcess);
     initClk();
     logFile = fopen("scheduler.log", "a");
@@ -49,32 +54,34 @@ int main(int argc, char *argv[])
     int timeQuantum = atoi(argv[2]); // 1 -> HPF, 2 -> SRTN, 3 -> RR
     runningProcess = NULL;
     PCBTable = malloc(totalProcesses * sizeof(Process *));
-    readyQueue = priority_queue_init();
 
-    printf("Scheduler started\n");
-    key_t key_id;
-
-    key_id = ftok("pgen_sch_keyfile", 65);
-    msgq_id = msgget(key_id, 0666 | IPC_CREAT);
-
-    if (msgq_id == -1)
+    printf("Scheduler started with arguments: (%d, %d, %d)\n", algorithm, timeQuantum, totalProcesses);
+    msgq_id1 = getMessageQueueID("pgen_sch_keyfile", 65);
+    msgq_id2 = getMessageQueueID("pgen_sch_keyfile", 66);
+    if (msgq_id1 == -1)
     {
         perror("Error in creating the queue");
         exit(-1);
     }
-    printf("Message queue id =    %d\n", msgq_id);
+    printf("Message queue id =    %d\n", msgq_id1);
+
+    sleep(100);
 
     switch (algorithm)
     {
     case 1:
+        readyQueue = createMinHeap(HPF_Algorithm);
         HPF(readyQueue);
         break;
     case 2:
         /* SRTN */
+        readyQueue = createMinHeap(SRTN_Algorithm);
         SRTN();
         break;
     case 3:
-        RR(readyQueue, timeQuantum);
+        // readyQueue = createMinHeap(RR_Algorithm);
+        rrReadyQueue = priority_queue_init();
+        RR(timeQuantum);
         break;
 
     default:
@@ -99,55 +106,56 @@ void switchProcess(Process **runningProcess, Process *p)
     (*runningProcess)->state = 2;
 }
 
-
-
-void SRTN(){
-
+void SRTN()
+{
 }
-
 
 void HPF(PriorityQueuePointer readyQueue)
 {
-    while (!priority_queue_empty(readyQueue))
+    while (!finished)
     {
-        while (time == getClk())
+        while (!priority_queue_empty(readyQueue))
         {
-        };
-        time = getClk();
-        if (!(runningProcess))
-        {
-            switchProcess((&runningProcess), priority_queue_remove(readyQueue));
-            int pid = fork();
-            if (pid == -1)
-                perror("Error in forking a process!");
-            else if (pid == 0)
+            while (time == getClk())
             {
-                char arg1[10];
-                sprintf(arg1, "%d", (runningProcess)->remainingTime);
-                execl("./process.out", "process", arg1, NULL);
-            }
-            else
+            };
+            time = getClk();
+            if (!(runningProcess))
             {
-                int statlock;
-                int cid = wait(&statlock); // to ensure that it waits for the running process to finish
-                if (WIFEXITED(statlock))
-                    printf("A process terminated successfully with status %d.", WEXITSTATUS(statlock));
-                else
-                    printf("Some thing went wrong with the process.");
+                switchProcess((&runningProcess), priority_queue_remove(readyQueue));
+                // int pid = fork();
+                // if (pid == -1)
+                //     perror("Error in forking a process!");
+                // else if (pid == 0)
+                // {
+                //     char arg1[10];
+                //     sprintf(arg1, "%d", (runningProcess)->remainingTime);
+                //     execl("./process.out", "process", arg1, NULL);
+                // }
+                // else
+                // {
+                //     kill(pid, SIGCONT);
+                //     int statlock;
+                //     int cid = wait(&statlock); // to ensure that it waits for the running process to finish
+                //     if (WIFEXITED(statlock))
+                //         printf("A process terminated successfully with status %d.", WEXITSTATUS(statlock));
+                //     else
+                //         printf("Some thing went wrong with the process.");
+                // }
             }
         }
     }
 }
 
-void RR(PriorityQueuePointer readyQueue, int timeQuantum)
+void RR(int timeQuantum)
 {
     while (totalProcessesFinished < totalProcesses)
     {
         printf("waiting for ready queue\n");
         fflush(stdout);
-        if(!priority_queue_empty(readyQueue))
+        if (!priority_queue_empty(rrReadyQueue))
         {
-            runningProcess = priority_queue_remove(readyQueue);
+            runningProcess = priority_queue_remove(rrReadyQueue);
             printf("\n\nrunning process %d\n\n\n", runningProcess->id);
             fflush(stdout);
             if (runningProcess->state == 0)
@@ -177,7 +185,8 @@ void RR(PriorityQueuePointer readyQueue, int timeQuantum)
             int remainingTime = timeQuantum;
             while (remainingTime > 0)
             {
-                while (time == getClk());
+                while (time == getClk())
+                    ;
                 printf("remaning quantum is %d, remaining time is %d, current time is %d\n", remainingTime, p->remainingTime, getClk());
                 time = getClk();
                 p->remainingTime--;
@@ -188,7 +197,7 @@ void RR(PriorityQueuePointer readyQueue, int timeQuantum)
             }
             if (p->remainingTime > 0)
             {
-                insert_into_tail(p, readyQueue);
+                insert_into_tail(p, rrReadyQueue);
                 p->lastStoppedTime = time;
                 p->state = 1;
                 writeToLogFile(1);
@@ -206,7 +215,7 @@ void receiveProcess(int signum)
     fflush(stdout);
     Process *p = malloc(sizeof(Process));
     msgbuff message;
-    int recval = msgrcv(msgq_id, &message, sizeof(message.msg_process), 1, !IPC_NOWAIT);
+    int recval = msgrcv(msgq_id1, &message, sizeof(message.msg_process), 1, !IPC_NOWAIT);
     *p = message.msg_process;
     if (recval == -1)
     {
@@ -223,27 +232,34 @@ void receiveProcess(int signum)
         switch (algorithm)
         {
         case 1:
-            priority_queue_insert(p, readyQueue, 1);
+            // pushInHeap(readyQueue, p);
+            printf("pushed in heap\n");
+            fflush(stdout);
             break;
         case 2:
-            priority_queue_insert(p, readyQueue, 0);
+            // pushInHeap(readyQueue, p);
             break;
         case 3:
             printf("inserting process %d into ready queue\n", p->id);
-            insert_into_tail(p, readyQueue);
+            insert_into_tail(p, rrReadyQueue);
             break;
         }
 
-        //print ready queue content
-        for (int i = 0; i < readyQueue->Count; i++)
-        {
-            printf("I am process %d\n", i);
-            fflush(stdout);
-        }
+        printf("minHeap\n");
+        fflush(stdout);
+        printHeap(readyQueue);
+
+        // print ready queue content
+        // for (int i = 0; i < rrReadyQueue->Count; i++)
+        // {
+        //     printf("rrReadyQueue : I am process %d\n", i);
+        //     fflush(stdout);
+        // }
+        int sendval = msgsnd(msgq_id2, &message, sizeof(message.msg_process), !IPC_NOWAIT);
         printf("--------------------------------------------------------------------------------\n");
         fflush(stdout);
-        
     }
+    signal(SIGUSR2, receiveProcess);
 }
 
 void writeToLogFile(int state)
@@ -279,6 +295,7 @@ void processFinishedHandler(int signum)
     totalProcessesFinished++;
     writeToLogFile(2);
     deleteProcess();
+    signal(SIGCHLD, processFinishedHandler);
 }
 
 void createPerfFile()
@@ -300,4 +317,10 @@ void deleteProcess()
 {
     free(PCBTable[runningProcess->id]);
     runningProcess = NULL;
+}
+
+void allProcessesSentHandler(int signum)
+{
+    finished = true;
+    signal(SIGUSR1, allProcessesSentHandler);
 }
