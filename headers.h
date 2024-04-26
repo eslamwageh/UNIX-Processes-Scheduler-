@@ -75,3 +75,20 @@ int getMessageQueueID(char* filename , char code){
     }
     return messageQueueID;
 }
+
+int getSharedMemory(char* filename , char code){
+    int sharedMemoryID = shmget(ftok(filename,code),4,0666|IPC_CREAT);
+    if((long)sharedMemoryID == -1){
+        perror("Didn't create shared Memory with error\n");
+    }
+    return sharedMemoryID;
+}
+
+void* getSharedMemoryAddress(int sharedMemoryID){
+    void* sharedMemoryAddress = shmat(sharedMemoryID,(void *)0, 0);
+    return sharedMemoryAddress;
+}
+
+void destroySharedMemory(int sharedMemoryID){
+    shmctl(sharedMemoryID, IPC_RMID, (struct shmid_ds *)0);
+}

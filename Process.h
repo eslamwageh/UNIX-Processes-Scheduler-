@@ -17,8 +17,16 @@ typedef struct Process
 
 typedef enum Algorithm
 {
-  HPF_Algorithm,
-  SRTN_Algorithm
+  HPF_Algorithm = 1,
+  SRTN_Algorithm,
+  RR_Algorithm
 } Algorithm;
+
+typedef enum ProcessState{
+  STARTED,
+  STOPPED,
+  RESUMED,
+  FINISHED
+} ProcessState;
 
 #endif /* PROCESS_H */
