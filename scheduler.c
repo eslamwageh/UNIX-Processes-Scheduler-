@@ -128,7 +128,6 @@ void SRTN()
                 if((*runningProcessSRTN) == NULL)
                     printf("There is no running process right now.\n");
                 else{
-                    printf("2ol 7a7a ya\n");
                     (*runningProcessSRTN)->lastStoppedTime = time;
                     (*runningProcessSRTN)->state = STOPPED;
                     (*runningProcessSRTN)->remainingTime = *schedulerProcessSharedMemoryAddress;
