@@ -122,7 +122,7 @@ void sendProcessToScheduler(Process p)
     kill(schedPid, SIGUSR2);
     printf("sent signal to scheduler\n");
     fflush(stdout);
-    sendval = msgsnd(msgq_id1, &message, sizeof(p), !IPC_NOWAIT);
+    sendval = msgsnd(msgq_id1, &message, sizeof(message.msg_process), !IPC_NOWAIT);
     fflush(stdout);
     if (sendval == -1)
     {
@@ -134,7 +134,7 @@ void sendProcessToScheduler(Process p)
         printf("sent a process to scheduler with id = %d\n", message.msg_process.id);
         fflush(stdout);
     }
-    int recval = msgrcv(msgq_id2, &message, sizeof(message.msg_process), 1, !IPC_NOWAIT);
+    int recval = msgrcv(msgq_id2, &message, sizeof(message.msg_process), 0, !IPC_NOWAIT);
     if (recval != -1)
     {
         printf("Acknowledged\n");
@@ -227,6 +227,8 @@ Process _createProcess(int id, int arrivalTime, int runTime, int priority)
     p.remainingTime = runTime;
     p.waitingTime = 0;
     p.state = 0;
+    p.pid = -1;
     p.priority = priority;
+    p.lastStoppedTime = -1;
     return p;
 }

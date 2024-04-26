@@ -2,10 +2,14 @@
 #include "PriorityQueue.h"
 #include "math.h"
 #include "MinHeap.h"
+#include <stddef.h>
+#include "stdlib.h"
 
 int time;
 int algorithm;
 int notBusy;
+int timeQuantum;
+bool inQuantum;
 int msgq_id1, msgq_id2;
 bool finished = false;
 
@@ -34,6 +38,7 @@ void SRTN();
 void HPF();
 void processFinishedHandler(int signum);
 void allProcessesSentHandler(int signum);
+void finishedQuantum(int signum);
 void deleteProcess();
 void RR(int timeQuantum);
 void receiveProcess(int signum);
@@ -46,13 +51,15 @@ int main(int argc, char *argv[])
     signal(SIGCHLD, processFinishedHandler);
     signal(SIGUSR1, allProcessesSentHandler);
     signal(SIGUSR2, receiveProcess);
+    signal(SIGCONT, finishedQuantum);
+
     initClk();
     logFile = fopen("scheduler.log", "w");
     time = -1;
     // TODO implement the scheduler :)
     totalProcesses = atoi(argv[3]);
     algorithm = atoi(argv[1]);
-    int timeQuantum = atoi(argv[2]); // 1 -> HPF, 2 -> SRTN, 3 -> RR
+    timeQuantum = atoi(argv[2]); // 1 -> HPF, 2 -> SRTN, 3 -> RR
     runningProcess = NULL;
     PCBTable = malloc(totalProcesses * sizeof(Process *));
 
@@ -157,10 +164,14 @@ void RR(int timeQuantum)
 {
     while (totalProcessesFinished < totalProcesses)
     {
+        while (time == getClk())
+            ;
+        time = getClk();
         printf("waiting for ready queue\n");
         fflush(stdout);
         if (!priority_queue_empty(rrReadyQueue))
         {
+            inQuantum = true;
             runningProcess = priority_queue_remove(rrReadyQueue);
             printf("\n\nrunning process %d\n\n\n", runningProcess->id);
             fflush(stdout);
@@ -173,43 +184,41 @@ void RR(int timeQuantum)
                     perror("Error in forking a process!");
                 else if (pid == 0)
                 {
-                    char arg1[10];
+                    char arg1[10], arg2[10];
                     sprintf(arg1, "%d", runningProcess->remainingTime);
-                    execl("./process.out", "process", arg1, NULL);
+                    sprintf(arg2, "%d", timeQuantum);
+                    execl("./process.out", "process", arg1, arg2, NULL);
                 }
                 else
                 {
                     runningProcess->pid = pid;
                 }
             }
-            printf("no need to fork process %d\n", runningProcess->id);
-            fflush(stdout);
+            else
+            {
+                printf("no need to fork process %d\n", runningProcess->id);
+                fflush(stdout);
+            }
             writeToLogFile(0);
             runningProcess->state = 2;
-            Process *p = runningProcess;
-            p->waitingTime += time - p->lastStoppedTime;
-            int remainingTime = timeQuantum;
-            while (remainingTime > 0)
+            runningProcess->waitingTime += time - runningProcess->lastStoppedTime;
+
+            kill(runningProcess->pid, SIGUSR1);
+            printf("time before while : %d", getClk());
+            while (inQuantum)
             {
-                while (time == getClk())
-                    ;
-                printf("remaning quantum is %d, remaining time is %d, current time is %d\n", remainingTime, p->remainingTime, getClk());
-                time = getClk();
-                p->remainingTime--;
-                kill(p->pid, SIGCONT);
-                if (p->remainingTime == 0)
-                    break;
-                remainingTime--;
             }
-            if (p->remainingTime > 0)
+            printf("time after while : %d", getClk());
+            if (runningProcess->remainingTime > 0)
             {
-                insert_into_tail(p, rrReadyQueue);
-                p->lastStoppedTime = time;
-                p->state = 1;
+                insert_into_tail(runningProcess, rrReadyQueue);
+                runningProcess->lastStoppedTime = time;
+                runningProcess->state = 1;
                 writeToLogFile(1);
             }
         }
     }
+    printf("exited the big while");
 }
 // 1. generator sends process to scheduler
 // 2. scheduler fork the process and store its pid
@@ -221,7 +230,7 @@ void receiveProcess(int signum)
     fflush(stdout);
     Process *p = malloc(sizeof(Process));
     msgbuff message;
-    int recval = msgrcv(msgq_id1, &message, sizeof(message.msg_process), 1, !IPC_NOWAIT);
+    int recval = msgrcv(msgq_id1, &message, sizeof(message.msg_process), 0, !IPC_NOWAIT);
     *p = message.msg_process;
     if (recval == -1)
     {
@@ -256,11 +265,12 @@ void receiveProcess(int signum)
         // printHeap(readyQueue);
 
         // print ready queue content
-        // for (int i = 0; i < rrReadyQueue->Count; i++)
-        // {
-        //     printf("rrReadyQueue : I am process %d\n", i);
-        //     fflush(stdout);
-        // }
+        // if (rrReadyQueue->Count == 5)
+        //     for (int i = 0; !priority_queue_empty(rrReadyQueue); i++)
+        //     {
+        //         printf("rrReadyQueue : I am process %d with id : %d\n", i, priority_queue_remove(rrReadyQueue)->id);
+        //         fflush(stdout);
+        //     }
         int sendval = msgsnd(msgq_id2, &message, sizeof(message.msg_process), !IPC_NOWAIT);
         printf("--------------------------------------------------------------------------------\n");
         fflush(stdout);
@@ -331,4 +341,11 @@ void allProcessesSentHandler(int signum)
 {
     finished = true;
     signal(SIGUSR1, allProcessesSentHandler);
+}
+
+void finishedQuantum(int signum)
+{
+    inQuantum = false;
+    runningProcess->remainingTime -= timeQuantum;
+    signal(SIGCONT, finishedQuantum);
 }
