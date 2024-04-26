@@ -26,7 +26,7 @@ FILE *logFile;
 Process **runningProcessSRTN;
 Process **PCBTable;
 Process *runningProcess;
-priority_queue *readyQueue;
+priority_queue *readyQueue = NULL;
 PriorityQueuePointer rrReadyQueue;
 
 typedef struct msgbuff
@@ -266,7 +266,7 @@ void RR(int timeQuantum)
             {
             }
             printf("time after while : %d", getClk());
-            if (runningProcess->remainingTime > 0)
+            if (runningProcess)
             {
                 insert_into_tail(runningProcess, rrReadyQueue);
                 runningProcess->lastStoppedTime = time;
@@ -307,6 +307,8 @@ void receiveProcess(int signum)
             pushInHeap(readyQueue, p);
             printf("pushed in heap\n");
             fflush(stdout);
+            // printf("minHeap\n");
+            printHeap(readyQueue);
             break;
         case 2:
             if ((*runningProcessSRTN) != NULL)
@@ -319,18 +321,16 @@ void receiveProcess(int signum)
             }
             pushInHeap(readyQueue, p);
             printf("pushed in heap\n");
+            fflush(stdout);
             printHeap(readyQueue);
             fflush(stdout);
             break;
         case 3:
             printf("inserting process %d into ready queue\n", p->id);
+            fflush(stdout);
             insert_into_tail(p, rrReadyQueue);
             break;
         }
-
-        // printf("minHeap\n");
-        fflush(stdout);
-        printHeap(readyQueue);
 
         // print ready queue content
         // if (rrReadyQueue->Count == 5)
@@ -377,7 +377,8 @@ void writeToLogFile(int state)
 
 void processFinishedHandler(int signum)
 {
-    popFromHeap(readyQueue);
+    if (readyQueue)
+        popFromHeap(readyQueue);
     inQuantum = false; // this is the test case that eslam told me
     totalProcessesFinished++;
     runningProcess->remainingTime = 0;

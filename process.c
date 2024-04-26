@@ -7,10 +7,13 @@ int time = -1;
 int schedulerProcessSharedMemoryID;
 int *schedulerProcessSharedMemoryAddress;
 
+void slamo3leko(int signum);
+
 int q = -1;
 
 int main(int agrc, char *argv[])
 {
+    signal(SIGUSR1, slamo3leko);
     initClk();
     schedulerProcessSharedMemoryID = getSharedMemory("sch_pcs_keyfile", 'A');
     schedulerProcessSharedMemoryAddress = (int *)getSharedMemoryAddress(schedulerProcessSharedMemoryID);
@@ -49,4 +52,9 @@ int main(int agrc, char *argv[])
     kill(getppid(), SIGTSTP);
     destroyClk(false);
     return 0;
+}
+
+void slamo3leko(int signum)
+{
+    printf("slamo 3leko\n");
 }
