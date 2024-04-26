@@ -2,13 +2,17 @@
 #include "PriorityQueue.h"
 #include "math.h"
 #include "MinHeap.h"
+#include <stddef.h>
+#include "stdlib.h"
 
 int time;
 int algorithm;
 int notBusy;
+int timeQuantum;
+bool inQuantum;
 int msgq_id1, msgq_id2;
 int schedulerProcessSharedMemoryID;
-int* schedulerProcessSharedMemoryAddress;
+int *schedulerProcessSharedMemoryAddress;
 bool finished = false;
 
 // Statistics
@@ -19,10 +23,10 @@ int totalProcesses = 0;
 int totalProcessesFinished = 0;
 int totalExecutionTime = 0;
 FILE *logFile;
-Process** runningProcessSRTN;
+Process **runningProcessSRTN;
 Process **PCBTable;
 Process *runningProcess;
-priority_queue *readyQueue;
+priority_queue *readyQueue = NULL;
 PriorityQueuePointer rrReadyQueue;
 
 typedef struct msgbuff
@@ -36,6 +40,7 @@ void SRTN();
 void HPF();
 void processFinishedHandler(int signum);
 void allProcessesSentHandler(int signum);
+void finishedQuantum(int signum);
 void deleteProcess();
 void RR(int timeQuantum);
 void receiveProcess(int signum);
@@ -48,13 +53,15 @@ int main(int argc, char *argv[])
     signal(SIGTSTP, processFinishedHandler);
     signal(SIGUSR1, allProcessesSentHandler);
     signal(SIGUSR2, receiveProcess);
+    signal(SIGCONT, finishedQuantum);
+
     initClk();
     logFile = fopen("scheduler.log", "w");
     time = -1;
     // TODO implement the scheduler :)
     totalProcesses = atoi(argv[3]);
     algorithm = atoi(argv[1]);
-    int timeQuantum = atoi(argv[2]); // 1 -> HPF, 2 -> SRTN, 3 -> RR
+    timeQuantum = atoi(argv[2]); // 1 -> HPF, 2 -> SRTN, 3 -> RR
     runningProcessSRTN = &runningProcess;
     *runningProcessSRTN = NULL;
     PCBTable = malloc(totalProcesses * sizeof(Process *));
@@ -68,8 +75,8 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     printf("Message queue id =    %d\n", msgq_id1);
-    schedulerProcessSharedMemoryID = getSharedMemory("sch_pcs_keyfile",'A');
-    schedulerProcessSharedMemoryAddress = (int*)getSharedMemoryAddress(schedulerProcessSharedMemoryID);
+    schedulerProcessSharedMemoryID = getSharedMemory("sch_pcs_keyfile", 'A');
+    schedulerProcessSharedMemoryAddress = (int *)getSharedMemoryAddress(schedulerProcessSharedMemoryID);
     // *schedulerProcessSharedMemoryAddress = 25;
     // printf("The value of shared memory is %d\n",*schedulerProcessSharedMemoryAddress);
 
@@ -116,33 +123,36 @@ void switchProcess(Process **runningProcess, Process *p)
         (*runningProcess)->state = 2;
 }
 
-
-
 void SRTN()
 {
-    while(totalProcessesFinished < totalProcesses){
-        while(!isHeapEmpty(readyQueue)){
-            while(time == getClk());
+    while (totalProcessesFinished < totalProcesses)
+    {
+        while (!isHeapEmpty(readyQueue))
+        {
+            while (time == getClk())
+                ;
             time = getClk();
-            if((*runningProcessSRTN) != getMin(readyQueue)){
-                if((*runningProcessSRTN) == NULL)
+            if ((*runningProcessSRTN) != getMin(readyQueue))
+            {
+                if ((*runningProcessSRTN) == NULL)
                     printf("There is no running process right now.\n");
-                else{
+                else
+                {
                     (*runningProcessSRTN)->lastStoppedTime = time;
                     (*runningProcessSRTN)->state = STOPPED;
                     (*runningProcessSRTN)->remainingTime = *schedulerProcessSharedMemoryAddress;
                     writeToLogFile((*runningProcessSRTN)->state);
-                    kill((*runningProcessSRTN)->pid,SIGSTOP);
+                    kill((*runningProcessSRTN)->pid, SIGSTOP);
                 }
                 (*runningProcessSRTN) = getMin(readyQueue);
-                (*runningProcessSRTN)->waitingTime += time 
-                    -(((*runningProcessSRTN)->state == STARTED) * (*runningProcessSRTN)->arrivalTime +
-                      ((*runningProcessSRTN)->state == STOPPED) * (*runningProcessSRTN)->lastStoppedTime);
-                if((*runningProcessSRTN)->state == STOPPED)
+                (*runningProcessSRTN)->waitingTime += time - (((*runningProcessSRTN)->state == STARTED) * (*runningProcessSRTN)->arrivalTime +
+                                                              ((*runningProcessSRTN)->state == STOPPED) * (*runningProcessSRTN)->lastStoppedTime);
+                if ((*runningProcessSRTN)->state == STOPPED)
                     (*runningProcessSRTN)->state = RESUMED;
                 writeToLogFile(0);
-                //-------------------------- Repeated Code Section --------------------// 
-                if((*runningProcessSRTN)->state == STARTED){
+                //-------------------------- Repeated Code Section --------------------//
+                if ((*runningProcessSRTN)->state == STARTED)
+                {
                     int pid = fork();
                     if (pid == -1)
                         perror("Error in forking a process!");
@@ -154,15 +164,13 @@ void SRTN()
                     }
                     else
                         (*runningProcessSRTN)->pid = pid;
-
                 }
-                else if ((*runningProcessSRTN)->state == RESUMED){
-                    kill((*runningProcessSRTN)->pid,SIGCONT);
+                else if ((*runningProcessSRTN)->state == RESUMED)
+                {
+                    kill((*runningProcessSRTN)->pid, SIGCONT);
                 }
                 //---------------------------------------------------------------------//
-
             }
-
         }
     }
 }
@@ -179,7 +187,7 @@ void HPF()
             };
             time = getClk();
             if (!(runningProcess))
-            {   
+            {
 
                 switchProcess((&runningProcess), popFromHeap(readyQueue));
                 runningProcess->waitingTime = time - runningProcess->arrivalTime;
@@ -196,6 +204,7 @@ void HPF()
                 else
                 {
                     int statlock;
+                    // we must wait for all processes to finish not only the first//////////////////////////
                     int cid = wait(&statlock); // to ensure that it waits for the running process to finish
                     if (WIFEXITED(statlock))
                         printf("A process terminated successfully with status %d.\n", WEXITSTATUS(statlock));
@@ -212,10 +221,14 @@ void RR(int timeQuantum)
 {
     while (totalProcessesFinished < totalProcesses)
     {
+        while (time == getClk())
+            ;
+        time = getClk();
         printf("waiting for ready queue\n");
         fflush(stdout);
         if (!priority_queue_empty(rrReadyQueue))
         {
+            inQuantum = true;
             runningProcess = priority_queue_remove(rrReadyQueue);
             printf("\n\nrunning process %d\n\n\n", runningProcess->id);
             fflush(stdout);
@@ -228,43 +241,41 @@ void RR(int timeQuantum)
                     perror("Error in forking a process!");
                 else if (pid == 0)
                 {
-                    char arg1[10];
+                    char arg1[10], arg2[10];
                     sprintf(arg1, "%d", runningProcess->remainingTime);
-                    execl("./process.out", "process", arg1, NULL);
+                    sprintf(arg2, "%d", timeQuantum);
+                    execl("./process.out", "process", arg1, arg2, NULL);
                 }
                 else
                 {
                     runningProcess->pid = pid;
                 }
             }
-            printf("no need to fork process %d\n", runningProcess->id);
-            fflush(stdout);
+            else
+            {
+                printf("no need to fork process %d\n", runningProcess->id);
+                fflush(stdout);
+            }
             writeToLogFile(0);
             runningProcess->state = 2;
-            Process *p = runningProcess;
-            p->waitingTime += time - p->lastStoppedTime;
-            int remainingTime = timeQuantum;
-            while (remainingTime > 0)
+            runningProcess->waitingTime += time - runningProcess->lastStoppedTime;
+
+            kill(runningProcess->pid, SIGUSR1);
+            printf("time before while : %d", getClk());
+            while (inQuantum)
             {
-                while (time == getClk())
-                    ;
-                printf("remaning quantum is %d, remaining time is %d, current time is %d\n", remainingTime, p->remainingTime, getClk());
-                time = getClk();
-                p->remainingTime--;
-                kill(p->pid, SIGCONT);
-                if (p->remainingTime == 0)
-                    break;
-                remainingTime--;
             }
-            if (p->remainingTime > 0)
+            printf("time after while : %d", getClk());
+            if (runningProcess)
             {
-                insert_into_tail(p, rrReadyQueue);
-                p->lastStoppedTime = time;
-                p->state = 1;
+                insert_into_tail(runningProcess, rrReadyQueue);
+                runningProcess->lastStoppedTime = getClk();
+                runningProcess->state = 1;
                 writeToLogFile(1);
             }
         }
     }
+    printf("exited the big while");
 }
 // 1. generator sends process to scheduler
 // 2. scheduler fork the process and store its pid
@@ -276,7 +287,7 @@ void receiveProcess(int signum)
     fflush(stdout);
     Process *p = malloc(sizeof(Process));
     msgbuff message;
-    int recval = msgrcv(msgq_id1, &message, sizeof(message.msg_process), 1, !IPC_NOWAIT);
+    int recval = msgrcv(msgq_id1, &message, sizeof(message.msg_process), 0, !IPC_NOWAIT);
     *p = message.msg_process;
     if (recval == -1)
     {
@@ -296,10 +307,13 @@ void receiveProcess(int signum)
             pushInHeap(readyQueue, p);
             printf("pushed in heap\n");
             fflush(stdout);
+            // printf("minHeap\n");
+            printHeap(readyQueue);
             break;
         case 2:
-            if((*runningProcessSRTN) != NULL){
-                printf("Value in shared memory is %d\n",*schedulerProcessSharedMemoryAddress);
+            if ((*runningProcessSRTN) != NULL)
+            {
+                printf("Value in shared memory is %d\n", *schedulerProcessSharedMemoryAddress);
                 (*runningProcessSRTN)->remainingTime = *schedulerProcessSharedMemoryAddress;
                 printf("------------------------\n");
                 printProcessInfo((*runningProcessSRTN));
@@ -307,25 +321,24 @@ void receiveProcess(int signum)
             }
             pushInHeap(readyQueue, p);
             printf("pushed in heap\n");
+            fflush(stdout);
             printHeap(readyQueue);
             fflush(stdout);
             break;
         case 3:
             printf("inserting process %d into ready queue\n", p->id);
+            fflush(stdout);
             insert_into_tail(p, rrReadyQueue);
             break;
         }
 
-        // printf("minHeap\n");
-        fflush(stdout);
-        printHeap(readyQueue);
-
         // print ready queue content
-        // for (int i = 0; i < rrReadyQueue->Count; i++)
-        // {
-        //     printf("rrReadyQueue : I am process %d\n", i);
-        //     fflush(stdout);
-        // }
+        // if (rrReadyQueue->Count == 5)
+        //     for (int i = 0; !priority_queue_empty(rrReadyQueue); i++)
+        //     {
+        //         printf("rrReadyQueue : I am process %d with id : %d\n", i, priority_queue_remove(rrReadyQueue)->id);
+        //         fflush(stdout);
+        //     }
         int sendval = msgsnd(msgq_id2, &message, sizeof(message.msg_process), !IPC_NOWAIT);
         printf("--------------------------------------------------------------------------------\n");
         fflush(stdout);
@@ -346,7 +359,7 @@ void writeToLogFile(int state)
     {
     case 0:
         if ((p)->state == 0)
-            fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", time, (p)->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
+            fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", time - (int)(algorithm == 3), (p)->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         else
             fprintf(logFile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         break;
@@ -354,7 +367,7 @@ void writeToLogFile(int state)
         fprintf(logFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         break;
     case 2:
-        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time + 1, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime, time - p->arrivalTime + 1, (float)(time - p->arrivalTime + 1) / p->runTime);
+        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time + 1 - (int)(algorithm == 3), p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime, time - p->arrivalTime + 1, (float)(time - p->arrivalTime + 1) / p->runTime);
         totalWTA += (float)(time - (p)->arrivalTime) / (p)->runTime;
         totalWTA2 += pow((float)(time - (p)->arrivalTime) / (p)->runTime, 2);
         totalWaitingTime += (p)->waitingTime;
@@ -364,7 +377,9 @@ void writeToLogFile(int state)
 
 void processFinishedHandler(int signum)
 {
-    popFromHeap(readyQueue);
+    if (algorithm == 2)
+        popFromHeap(readyQueue);
+    inQuantum = false; // this is the test case that eslam told me
     totalProcessesFinished++;
     runningProcess->remainingTime = 0;
     writeToLogFile(2);
@@ -398,4 +413,11 @@ void allProcessesSentHandler(int signum)
 {
     finished = true;
     signal(SIGUSR1, allProcessesSentHandler);
+}
+
+void finishedQuantum(int signum)
+{
+    inQuantum = false;
+    runningProcess->remainingTime -= timeQuantum;
+    signal(SIGCONT, finishedQuantum);
 }
