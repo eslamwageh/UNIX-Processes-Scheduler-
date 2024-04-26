@@ -129,8 +129,8 @@ void SRTN()
     {
         while (!isHeapEmpty(readyQueue))
         {
-            while (time == getClk())
-                ;
+            // while (time == getClk())
+            //     ;
             time = getClk();
             if ((*runningProcessSRTN) != getMin(readyQueue))
             {
@@ -145,8 +145,7 @@ void SRTN()
                     kill((*runningProcessSRTN)->pid, SIGSTOP);
                 }
                 (*runningProcessSRTN) = getMin(readyQueue);
-                (*runningProcessSRTN)->waitingTime += time - (((*runningProcessSRTN)->state == STARTED) * (*runningProcessSRTN)->arrivalTime +
-                                                              ((*runningProcessSRTN)->state == STOPPED) * (*runningProcessSRTN)->lastStoppedTime);
+                (*runningProcessSRTN)->waitingTime += time - (*runningProcessSRTN)->lastStoppedTime;
                 if ((*runningProcessSRTN)->state == STOPPED)
                     (*runningProcessSRTN)->state = RESUMED;
                 writeToLogFile(0);
@@ -296,7 +295,6 @@ void receiveProcess(int signum)
         printf("recieved with arrival time : %d\n", p->arrivalTime);
         fflush(stdout);
         totalExecutionTime += p->runTime;
-        p->lastStoppedTime = getClk();
         PCBTable[p->id] = p;
         switch (algorithm)
         {
