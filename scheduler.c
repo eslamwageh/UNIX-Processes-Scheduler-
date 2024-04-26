@@ -182,9 +182,6 @@ void HPF()
         while (!isHeapEmpty(readyQueue))
         {
             printHeap(readyQueue);
-            while (time == getClk())
-            {
-            };
             time = getClk();
             if (!(runningProcess))
             {
@@ -353,13 +350,12 @@ void writeToLogFile(int state)
         perror("Error in opening the log file");
         exit(-1);
     }
-    time = getClk();
     dynamicProcess p = (algorithm == SRTN_Algorithm) ? (*runningProcessSRTN) : (runningProcess);
     switch (state)
     {
     case 0:
         if ((p)->state == 0)
-            fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", time - (int)(algorithm == 3), (p)->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
+            fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", time, (p)->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         else
             fprintf(logFile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         break;
@@ -367,7 +363,7 @@ void writeToLogFile(int state)
         fprintf(logFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         break;
     case 2:
-        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time + 1 - (int)(algorithm == 3), p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime, time - p->arrivalTime + 1, (float)(time - p->arrivalTime + 1) / p->runTime);
+        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime, time - p->arrivalTime, (float)(time - p->arrivalTime) / p->runTime);
         totalWTA += (float)(time - (p)->arrivalTime) / (p)->runTime;
         totalWTA2 += pow((float)(time - (p)->arrivalTime) / (p)->runTime, 2);
         totalWaitingTime += (p)->waitingTime;
@@ -382,6 +378,7 @@ void processFinishedHandler(int signum)
     inQuantum = false; // this is the test case that eslam told me
     totalProcessesFinished++;
     runningProcess->remainingTime = 0;
+    time = getClk();
     writeToLogFile(2);
     deleteProcess();
     signal(SIGTSTP, processFinishedHandler);

@@ -24,15 +24,16 @@ int main(int agrc, char *argv[])
         timeQuantum = atoi(argv[2]);
         q = timeQuantum;
     }
-    printf("remaining time = %d\n", remainingtime);
+    printf("starting remaining time = %d\n", remainingtime);
     fflush(stdout);
     while (remainingtime > 0)
     {
+        time = getClk();
         while (time == getClk())
             ;
         printf("q is %d\n", q);
         fflush(stdout);
-        time = getClk();
+
         remainingtime--;
         *(schedulerProcessSharedMemoryAddress) = remainingtime;
         q--;
