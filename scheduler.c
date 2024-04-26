@@ -148,6 +148,7 @@ void HPF()
                 else
                 {
                     int statlock;
+                    // we must wait for all processes to finish not only the first//////////////////////////
                     int cid = wait(&statlock); // to ensure that it waits for the running process to finish
                     if (WIFEXITED(statlock))
                         printf("A process terminated successfully with status %d.", WEXITSTATUS(statlock));
