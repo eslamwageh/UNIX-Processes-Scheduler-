@@ -4,13 +4,18 @@
 int remainingtime;
 int timeQuantum;
 int time = -1;
+int schedulerProcessSharedMemoryID;
+int *schedulerProcessSharedMemoryAddress;
+
 int q = -1;
 
 int main(int agrc, char *argv[])
 {
     initClk();
-
+    schedulerProcessSharedMemoryID = getSharedMemory("sch_pcs_keyfile", 'A');
+    schedulerProcessSharedMemoryAddress = (int *)getSharedMemoryAddress(schedulerProcessSharedMemoryID);
     remainingtime = atoi(argv[1]);
+    *schedulerProcessSharedMemoryAddress = remainingtime;
     if (agrc == 3)
     {
         timeQuantum = atoi(argv[2]);
@@ -26,6 +31,7 @@ int main(int agrc, char *argv[])
         fflush(stdout);
         time = getClk();
         remainingtime--;
+        *(schedulerProcessSharedMemoryAddress) = remainingtime;
         q--;
         printf("remaining time = %d\n", remainingtime);
         fflush(stdout);
@@ -40,7 +46,7 @@ int main(int agrc, char *argv[])
             q = timeQuantum;
         }
     }
-
+    kill(getppid(), SIGTSTP);
     destroyClk(false);
     return 0;
 }
