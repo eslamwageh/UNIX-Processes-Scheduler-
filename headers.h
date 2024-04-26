@@ -90,5 +90,7 @@ void* getSharedMemoryAddress(int sharedMemoryID){
 }
 
 void destroySharedMemory(int sharedMemoryID){
+    if(sharedMemoryID == -1)
+        return;
     shmctl(sharedMemoryID, IPC_RMID, (struct shmid_ds *)0);
 }

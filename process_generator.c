@@ -109,6 +109,7 @@ void clearResources(int signum)
     struct msqid_ds ctl_statud_ds;
     msgctl(msgq_id1, IPC_RMID, (struct msqid_ds *)0);
     msgctl(msgq_id2, IPC_RMID, (struct msqid_ds *)0);
+    destroySharedMemory(getSharedMemory("sch_pcs_keyfile","A"));
     kill(-getpgrp(), SIGKILL);
 }
 
