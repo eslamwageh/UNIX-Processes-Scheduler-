@@ -309,6 +309,7 @@ void writeToLogFile(int state)
 
 void processFinishedHandler(int signum)
 {
+    inQuantum = false; // this is the test case that eslam told me
     totalProcessesFinished++;
     runningProcess->remainingTime = 0;
     writeToLogFile(2);
