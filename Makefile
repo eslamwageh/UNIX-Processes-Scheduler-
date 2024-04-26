@@ -1,4 +1,5 @@
 build:
+	# ipcrm -M 0x41108c72
 	gcc process_generator.c -o process_generator.out
 	gcc clk.c -o clk.out
 	gcc scheduler.c -o scheduler.out -lm

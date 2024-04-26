@@ -119,22 +119,34 @@ int isHeapEmpty(MinHeap *heap)
 
 void printProcessInfo(dynamicProcess p)
 {
-    printf("%d %d %d %d %d %d %d %d %d %d\n",
+    if(p == NULL){
+        printf("\n");
+        return;
+    }
+    printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
            p->remainingTime, p->runTime, p->arrivalTime, p->executionTime, p->id, p->lastStoppedTime, p->pid, p->priority, p->state, p->waitingTime);
 }
 
 void printHeap(MinHeap *heap)
 {
+    printf("--------------------------------------------------------------------------------\n");
+    printf("REM\tRUN\tARR\tEXEC\tID\tLST\tPID\tPRI\tSTATE\tWAIT\n");
     for (int i = 0; i < heap->size; i++)
     {
         printf("%d] ", i);
         printProcessInfo(heap->arr[i]);
     }
-    printf("\n");
+    printf("\n--------------------------------------------------------------------------------\n");
 }
 
-void destrotyHeap(MinHeap *mhp)
+void destrotyHeap(MinHeap *heap)
 {
-    free(mhp->arr);
-    free(mhp);
+    free(heap->arr);
+    free(heap);
+}
+
+dynamicProcess getMin(MinHeap* heap){
+    if (heap->size == 0)
+        return NULL;
+    return heap->arr[0];
 }
