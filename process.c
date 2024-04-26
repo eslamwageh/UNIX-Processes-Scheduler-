@@ -38,7 +38,7 @@ int main(int agrc, char *argv[])
         q--;
         printf("remaining time = %d\n", remainingtime);
         fflush(stdout);
-        if (agrc == 3 && q == 0)
+        if (remainingtime > 0 && agrc == 3 && q == 0)
         {
             printf("I will stop now as q = 0 with pid = %d\n", getpid());
             fflush(stdout);

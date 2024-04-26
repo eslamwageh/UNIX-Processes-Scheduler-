@@ -269,7 +269,7 @@ void RR(int timeQuantum)
             if (runningProcess)
             {
                 insert_into_tail(runningProcess, rrReadyQueue);
-                runningProcess->lastStoppedTime = time;
+                runningProcess->lastStoppedTime = getClk();
                 runningProcess->state = 1;
                 writeToLogFile(1);
             }
@@ -359,7 +359,7 @@ void writeToLogFile(int state)
     {
     case 0:
         if ((p)->state == 0)
-            fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", time, (p)->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
+            fprintf(logFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", time - (int)(algorithm == 3), (p)->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         else
             fprintf(logFile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         break;
@@ -367,7 +367,7 @@ void writeToLogFile(int state)
         fprintf(logFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         break;
     case 2:
-        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time + 1, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime, time - p->arrivalTime + 1, (float)(time - p->arrivalTime + 1) / p->runTime);
+        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time + 1 - (int)(algorithm == 3), p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime, time - p->arrivalTime + 1, (float)(time - p->arrivalTime + 1) / p->runTime);
         totalWTA += (float)(time - (p)->arrivalTime) / (p)->runTime;
         totalWTA2 += pow((float)(time - (p)->arrivalTime) / (p)->runTime, 2);
         totalWaitingTime += (p)->waitingTime;
@@ -377,7 +377,7 @@ void writeToLogFile(int state)
 
 void processFinishedHandler(int signum)
 {
-    if (readyQueue)
+    if (algorithm == 2)
         popFromHeap(readyQueue);
     inQuantum = false; // this is the test case that eslam told me
     totalProcessesFinished++;
