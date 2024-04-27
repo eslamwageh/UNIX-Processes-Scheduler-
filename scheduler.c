@@ -217,11 +217,11 @@ void RR(int timeQuantum)
 {
     while (totalProcessesFinished < totalProcesses)
     {
-        while (time == getClk())
-            ;
+        // while (time == getClk())
+        //     ;
         time = getClk();
-        printf("waiting for ready queue\n");
-        fflush(stdout);
+        // printf("waiting for ready queue\n");
+        // fflush(stdout);
         if (!priority_queue_empty(rrReadyQueue))
         {
             inQuantum = true;
