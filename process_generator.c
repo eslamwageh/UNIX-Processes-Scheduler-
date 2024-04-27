@@ -109,7 +109,7 @@ void clearResources(int signum)
     struct msqid_ds ctl_statud_ds;
     msgctl(msgq_id1, IPC_RMID, (struct msqid_ds *)0);
     msgctl(msgq_id2, IPC_RMID, (struct msqid_ds *)0);
-    destroySharedMemory(getSharedMemory("sch_pcs_keyfile",'A'));
+    destroySharedMemory(getSharedMemory("sch_pcs_keyfile", 'A'));
     kill(-getpgrp(), SIGKILL);
 }
 
@@ -230,6 +230,6 @@ Process _createProcess(int id, int arrivalTime, int runTime, int priority)
     p.state = 0;
     p.pid = -1;
     p.priority = priority;
-    p.lastStoppedTime = -1;
+    p.lastStoppedTime = arrivalTime;
     return p;
 }

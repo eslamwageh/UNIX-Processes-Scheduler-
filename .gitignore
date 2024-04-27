@@ -5,3 +5,5 @@ scheduler.log
 processes.txt
 scheduler.perf
 process_generator
+scheduler.log
+scheduler.perf
