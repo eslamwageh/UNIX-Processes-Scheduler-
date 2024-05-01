@@ -358,7 +358,7 @@ void writeToLogFile(int state)
             fprintf(logFile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         break;
     case 1:
-        fprintf(logFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
+        fprintf(logFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", p->lastStoppedTime, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         break;
     case 2:
         fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime, time - p->arrivalTime, (float)(time - p->arrivalTime) / p->runTime);

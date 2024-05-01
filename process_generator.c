@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
         //! **********************Don't forget to handle processes arriving at the same time****************
         //! ************************************************************************************************
         //! ************************************************************************************************
-        if (getClk() == processes[ptr].arrivalTime)
+        while (getClk() == processes[ptr].arrivalTime)
         {
             sendProcessToScheduler(processes[ptr]);
             ptr++;
