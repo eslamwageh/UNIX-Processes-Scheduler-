@@ -1,5 +1,9 @@
 #include "raylib.h"
 #include <string.h>
+#include "unistd.h"
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <stdlib.h>
 
 #define MAX_INPUT_CHARS 20
 
@@ -38,6 +42,8 @@ int main(void) {
             }
             //strcpy(filepath, inputText);
             //printf("%s",inputText);
+            
+            
 
         } else if (currentState == STATE_SECOND_WINDOW && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             // Change state based on mouse click position
@@ -122,6 +128,24 @@ int main(void) {
     printf("\n %s \n",inputText);
     printf("\n a7a \n");
     CloseWindow();
+
+    int pid = fork();
+    if(pid == 0)
+    {
+        printf("iam the child\n");
+        execl("./process_generator.out", "process_generator", inputText, algo, quantum, NULL);
+    }
+    else {
+        int statlock;
+        int cid = waitpid(pid, &statlock, 0);
+        if (WIFEXITED(statlock))
+        {
+            printf("GUI terminated successfully with status %d.", WEXITSTATUS(statlock));
+            //generate image
+        }
+        else
+            printf("Something went wrong with the GUI.\n");
+            }
 
     return 0;
 }
