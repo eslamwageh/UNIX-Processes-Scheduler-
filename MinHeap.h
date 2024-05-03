@@ -89,10 +89,10 @@ void heapifyDown(MinHeap *heap, int index)
     int min = index;
     if (leftChild == -1)
         return;
-    if ((heap->algorithm == SRTN_Algorithm && heap->arr[index]->remainingTime > heap->arr[leftChild]->remainingTime) || (heap->algorithm == HPF_Algorithm && heap->arr[index]->priority > heap->arr[leftChild]->priority))
+    if ((heap->algorithm == SRTN_Algorithm && (heap->arr[index]->remainingTime > heap->arr[leftChild]->remainingTime || heap->arr[index]->remainingTime == heap->arr[leftChild]->remainingTime && heap->arr[index]->id > heap->arr[leftChild]->id)) || (heap->algorithm == HPF_Algorithm && (heap->arr[index]->priority > heap->arr[leftChild]->priority || heap->arr[index]->priority == heap->arr[leftChild]->priority && heap->arr[index]->id > heap->arr[leftChild]->id)))
         min = leftChild;
     int rightChild = getRightChild(heap, index);
-    if ((rightChild != -1) && ((heap->algorithm == SRTN_Algorithm && heap->arr[min]->remainingTime > heap->arr[rightChild]->remainingTime) || ((heap->algorithm == HPF_Algorithm && heap->arr[min]->priority > heap->arr[rightChild]->priority))))
+    if ((rightChild != -1) && ((heap->algorithm == SRTN_Algorithm && (heap->arr[index]->remainingTime > heap->arr[rightChild]->remainingTime || heap->arr[index]->remainingTime == heap->arr[rightChild]->remainingTime && heap->arr[index]->id > heap->arr[rightChild]->id)) || (heap->algorithm == HPF_Algorithm && (heap->arr[index]->priority > heap->arr[rightChild]->priority || heap->arr[index]->priority == heap->arr[rightChild]->priority && heap->arr[index]->id > heap->arr[rightChild]->id))))
         min = rightChild;
     if (min == index)
         return;
