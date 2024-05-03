@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     printf("%s \n", argv[2]);
     printf("%s \n", argv[3]);
 
-    readInputFile();
+    readInputFile(filename);
 
     //! testing reading the file
     // for (int i = 0; i < processesCount; i++)
@@ -46,10 +46,11 @@ int main(int argc, char *argv[])
     // }
 
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
-    int algorithm, parameter = -1;
-
-    getUserInput(&algorithm, &parameter);
-    //  3. Initiate and create the scheduler and clock processes.
+    int algorithm = atoi(argv[2]), parameter = -1;
+    if (algorithm == 3)
+        parameter = atoi(argv[3]);
+    // getUserInput(&algorithm, &parameter);
+    //   3. Initiate and create the scheduler and clock processes.
     createClock();
 
     createScheduler(algorithm, parameter);
@@ -208,16 +209,16 @@ void createClock()
     }
 }
 
-void readInputFile()
+void readInputFile(char *filename)
 {
-    FILE *file = fopen("PROCESSES", "r");
+    FILE *file = fopen(filename, "r");
     int id, arrivaltime, runtime, priority;
     char line[100];
     fgets(line, sizeof(line), file);
     while (fscanf(file, "%d\t%d\t%d\t%d\n", &id, &arrivaltime, &runtime, &priority) == 4)
         processesCount++;
     fclose(file);
-    file = fopen("PROCESSES", "r");
+    file = fopen(filename, "r");
     fgets(line, sizeof(line), file);
     processes = (Process *)malloc(processesCount * sizeof(Process));
     for (int i = 0; i < processesCount; i++)
