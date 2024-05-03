@@ -86,19 +86,36 @@ void heapifyUp(MinHeap *heap, int index)
 void heapifyDown(MinHeap *heap, int index)
 {
     int leftChild = getLeftChild(heap, index);
-    int min = index;
-    if (leftChild == -1)
-        return;
-    if ((heap->algorithm == SRTN_Algorithm && (heap->arr[index]->remainingTime > heap->arr[leftChild]->remainingTime || heap->arr[index]->remainingTime == heap->arr[leftChild]->remainingTime && heap->arr[index]->id > heap->arr[leftChild]->id)) || (heap->algorithm == HPF_Algorithm && (heap->arr[index]->priority > heap->arr[leftChild]->priority || heap->arr[index]->priority == heap->arr[leftChild]->priority && heap->arr[index]->id > heap->arr[leftChild]->id)))
-        min = leftChild;
     int rightChild = getRightChild(heap, index);
-    if ((rightChild != -1) && ((heap->algorithm == SRTN_Algorithm && (heap->arr[index]->remainingTime > heap->arr[rightChild]->remainingTime || heap->arr[index]->remainingTime == heap->arr[rightChild]->remainingTime && heap->arr[index]->id > heap->arr[rightChild]->id)) || (heap->algorithm == HPF_Algorithm && (heap->arr[index]->priority > heap->arr[rightChild]->priority || heap->arr[index]->priority == heap->arr[rightChild]->priority && heap->arr[index]->id > heap->arr[rightChild]->id))))
+    int min = index;
+    
+    if (leftChild != -1 && (
+            (heap->algorithm == SRTN_Algorithm && (heap->arr[leftChild]->remainingTime < heap->arr[min]->remainingTime ||
+                                                    (heap->arr[leftChild]->remainingTime == heap->arr[min]->remainingTime && heap->arr[leftChild]->id < heap->arr[min]->id))) ||
+            (heap->algorithm == HPF_Algorithm && (heap->arr[leftChild]->priority < heap->arr[min]->priority ||
+                                                  (heap->arr[leftChild]->priority == heap->arr[min]->priority && heap->arr[leftChild]->id < heap->arr[min]->id)))
+        ))
+    {
+        min = leftChild;
+    }
+    
+    if (rightChild != -1 && (
+            (heap->algorithm == SRTN_Algorithm && (heap->arr[rightChild]->remainingTime < heap->arr[min]->remainingTime ||
+                                                    (heap->arr[rightChild]->remainingTime == heap->arr[min]->remainingTime && heap->arr[rightChild]->id < heap->arr[min]->id))) ||
+            (heap->algorithm == HPF_Algorithm && (heap->arr[rightChild]->priority < heap->arr[min]->priority ||
+                                                  (heap->arr[rightChild]->priority == heap->arr[min]->priority && heap->arr[rightChild]->id < heap->arr[min]->id)))
+        ))
+    {
         min = rightChild;
-    if (min == index)
-        return;
-    swap(&heap->arr[min], &heap->arr[index]);
-    heapifyDown(heap, min);
+    }
+    
+    if (min != index)
+    {
+        swap(&heap->arr[min], &heap->arr[index]);
+        heapifyDown(heap, min);
+    }
 }
+
 
 MinHeap *createMinHeap(Algorithm algo)
 {
