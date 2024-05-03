@@ -5,7 +5,6 @@ build:
 	gcc scheduler.c -o scheduler.out -lm
 	gcc process.c -o process.out
 	gcc test_generator.c -o test_generator.out
-	cc GUI.c -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
 clean:
 	rm -f *.out  processes.txt
@@ -13,4 +12,4 @@ clean:
 all: clean build
 
 run:
-	./a.out
+	./process_generator.out

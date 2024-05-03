@@ -245,6 +245,7 @@ void RR(int timeQuantum)
                 else
                 {
                     runningProcess->pid = pid;
+                    runningProcess->state = 2;
                 }
             }
             else
