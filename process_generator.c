@@ -103,7 +103,6 @@ int main(int argc, char *argv[])
     // terminates all the processes including process generator so it will no be able
     // to continue to clear recources
     // 7. Clear clock resources
-    clearResources(0);
     destroyClk(true);
 
     // 8. Clear message queue resources
@@ -113,11 +112,13 @@ int main(int argc, char *argv[])
 
 void clearResources(int signum)
 {
+    printf("\n\n\n\n\n\nclearing resources\n\n\n\n\n");
     // TODO Clears all resources in case of interruption
     struct msqid_ds ctl_statud_ds;
     msgctl(msgq_id1, IPC_RMID, (struct msqid_ds *)0);
     msgctl(msgq_id2, IPC_RMID, (struct msqid_ds *)0);
     destroySharedMemory(getSharedMemory("sch_pcs_keyfile", 'A'));
+    free(processes);
     // kill(-getpgrp(), SIGKILL);
 }
 
@@ -224,6 +225,7 @@ void readInputFile()
         fscanf(file, "%d %d %d %d", &id, &arrivaltime, &runtime, &priority);
         processes[i] = _createProcess(id, arrivaltime, runtime, priority);
     }
+    fclose(file);
 }
 
 Process _createProcess(int id, int arrivalTime, int runTime, int priority)

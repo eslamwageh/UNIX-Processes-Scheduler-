@@ -139,8 +139,9 @@ void printHeap(MinHeap *heap)
     printf("\n--------------------------------------------------------------------------------\n");
 }
 
-void destrotyHeap(MinHeap *heap)
+void destroyHeap(MinHeap *heap)
 {
+    printf("Destroying heap\n");
     free(heap->arr);
     free(heap);
 }

@@ -85,11 +85,13 @@ int main(int argc, char *argv[])
     case 1:
         readyQueue = createMinHeap(HPF_Algorithm);
         HPF(readyQueue);
+        destroyHeap(readyQueue);
         break;
     case 2:
         /* SRTN */
         readyQueue = createMinHeap(SRTN_Algorithm);
         SRTN();
+        destroyHeap(readyQueue);
         break;
     case 3:
         // readyQueue = createMinHeap(RR_Algorithm);
@@ -245,7 +247,6 @@ void RR(int timeQuantum)
                 else
                 {
                     runningProcess->pid = pid;
-                    runningProcess->state = 2;
                 }
             }
             else
