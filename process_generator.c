@@ -103,10 +103,10 @@ int main(int argc, char *argv[])
     // terminates all the processes including process generator so it will no be able
     // to continue to clear recources
     // 7. Clear clock resources
-    //destroyClk(true);
+    destroyClk(true);
 
     // 8. Clear message queue resources
-    clearResources(0);
+    //clearResources(0);
     return 0;
 }
 

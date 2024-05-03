@@ -3,16 +3,29 @@
 #include "unistd.h"
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
+#define MAX_TEXT_LENGTH 5000
 #define MAX_INPUT_CHARS 20
-
+int pid;
 typedef enum { STATE_INPUT, STATE_SECOND_WINDOW, STATE_ROUND_ROBIN, STATE_STRN, STATE_HPF, STATE_ROUND_ROBIN_INPUT } State;
 char inputText[] = "\0";
+
+
+
+void SIGINT_HANDLER(int signum)
+{
+        generate_schedlog();
+}
+
+
 int main(void) {
     const int screenWidth = 800;
     const int screenHeight = 450;
 
+    signal(SIGINT, SIGINT_HANDLER);
      // Input text buffer
     char quantumText[MAX_INPUT_CHARS + 1] = "\0"; // Quantum time input buffer
     bool showMessageBox = false; // Flag to show message box
@@ -125,18 +138,20 @@ int main(void) {
         
         EndDrawing();
     }
+
+    
     printf("\n %s \n",inputText);
-    printf("\n a7a \n");
     CloseWindow();
 
-    int pid = fork();
+    pid = fork();
     if(pid == 0)
     {
         printf("iam the child\n");
         execl("./process_generator.out", "process_generator", inputText, algo, quantum, NULL);
     }
     else {
-        int statlock;
+            //we moved them to the sigint handler
+            int statlock;
         int cid = waitpid(pid, &statlock, 0);
         if (WIFEXITED(statlock))
         {
@@ -145,7 +160,61 @@ int main(void) {
         }
         else
             printf("Something went wrong with the GUI.\n");
-            }
+        }
 
     return 0;
 }
+
+void generate_schedlog()
+{
+            // Read text from file
+        FILE *file = fopen("scheduler.log", "r");
+        if (file == NULL)
+        {
+            printf("Error: Unable to open file.\n");
+            return 1;
+        }
+
+        char text[MAX_TEXT_LENGTH] = "";
+        char line[MAX_TEXT_LENGTH];
+        while (fgets(line, MAX_TEXT_LENGTH, file) != NULL)
+        {
+            strcat(text, line);
+        }
+        for (int i = 0; i < 10; i++)
+        {
+            strcat(text, "\n");
+        }
+        
+        fclose(file);
+
+        // Initialize Raylib
+        InitWindow(800, 600, "Text to Image");
+
+        // Load font
+        Font font = LoadFont("resources/font.ttf");
+        SetTargetFPS(60);
+
+        // Measure text size
+        Vector2 textSize = MeasureTextEx(font, text, 20, 1);
+
+        // Create an image to draw text onto
+        Image image = GenImageColor((int)textSize.x + 40, (int)textSize.y + 40, BLACK);
+
+        // Draw the text onto the image
+        ImageDrawText(&image,text, 20, 20, 20, WHITE); // Offset by 20 to center text
+
+        // Save the image to a file
+        ExportImage(image, "output.png");
+
+        // Unload image
+        UnloadImage(image);
+
+        // Unload font
+        UnloadFont(font);
+
+        // Close window
+        CloseWindow();
+
+}
+
