@@ -57,8 +57,28 @@ int getParent(MinHeap *heap, int index)
 void heapifyUp(MinHeap *heap, int index)
 {
     int parentIndex = getParent(heap, index);
-    if (index == 0 || (heap->algorithm == SRTN_Algorithm && heap->arr[parentIndex]->remainingTime <= heap->arr[index]->remainingTime) || (heap->algorithm == HPF_Algorithm && heap->arr[parentIndex]->priority <= heap->arr[index]->priority))
-        return;
+    if (index == 0)
+    {
+        return; // If index is 0, return immediately
+    }
+
+    // For SRTN_Algorithm:
+    if (heap->algorithm == SRTN_Algorithm &&
+        (heap->arr[parentIndex]->remainingTime < heap->arr[index]->remainingTime ||
+         (heap->arr[parentIndex]->remainingTime == heap->arr[index]->remainingTime &&
+          heap->arr[parentIndex]->id < heap->arr[index]->id)))
+    {
+        return; // Conditions satisfied, return
+    }
+
+    // For HPF_Algorithm:
+    if (heap->algorithm == HPF_Algorithm &&
+        (heap->arr[parentIndex]->priority < heap->arr[index]->priority ||
+         (heap->arr[parentIndex]->priority == heap->arr[index]->priority &&
+          heap->arr[parentIndex]->id < heap->arr[index]->id)))
+    {
+        return; // Conditions satisfied, return
+    }
     swap(&heap->arr[parentIndex], &heap->arr[index]);
     heapifyUp(heap, parentIndex);
 }
@@ -119,7 +139,8 @@ int isHeapEmpty(MinHeap *heap)
 
 void printProcessInfo(dynamicProcess p)
 {
-    if(p == NULL){
+    if (p == NULL)
+    {
         printf("\n");
         return;
     }
@@ -146,7 +167,8 @@ void destroyHeap(MinHeap *heap)
     free(heap);
 }
 
-dynamicProcess getMin(MinHeap* heap){
+dynamicProcess getMin(MinHeap *heap)
+{
     if (heap->size == 0)
         return NULL;
     return heap->arr[0];
