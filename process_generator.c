@@ -31,14 +31,14 @@ int main(int argc, char *argv[])
     signal(SIGINT, clearResources);
     // TODO Initialization
     // 1. Read the input files.
-    char* filename = argv[1];
+    char *filename = argv[1];
 
     printf("%s \n", argv[1]);
     printf("%s \n", argv[2]);
     printf("%s \n", argv[3]);
 
     readInputFile(filename);
-    
+
     //! testing reading the file
     // for (int i = 0; i < processesCount; i++)
     // {
@@ -47,9 +47,10 @@ int main(int argc, char *argv[])
 
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     int algorithm = atoi(argv[2]), parameter = -1;
-    if(algorithm == 3) parameter = atoi(argv[3]);
-    //getUserInput(&algorithm, &parameter);
-    // 3. Initiate and create the scheduler and clock processes.
+    if (algorithm == 3)
+        parameter = atoi(argv[3]);
+    // getUserInput(&algorithm, &parameter);
+    //   3. Initiate and create the scheduler and clock processes.
     createClock();
 
     createScheduler(algorithm, parameter);
@@ -106,18 +107,20 @@ int main(int argc, char *argv[])
     destroyClk(true);
 
     // 8. Clear message queue resources
-    //clearResources(0);
+
     return 0;
 }
 
 void clearResources(int signum)
 {
+    printf("\n\n\n\n\n\nclearing resources\n\n\n\n\n");
     // TODO Clears all resources in case of interruption
     struct msqid_ds ctl_statud_ds;
     msgctl(msgq_id1, IPC_RMID, (struct msqid_ds *)0);
     msgctl(msgq_id2, IPC_RMID, (struct msqid_ds *)0);
     destroySharedMemory(getSharedMemory("sch_pcs_keyfile", 'A'));
-    //kill(-getpgrp(), SIGKILL);
+    free(processes);
+    // kill(-getpgrp(), SIGKILL);
 }
 
 void sendProcessToScheduler(Process p)
@@ -206,16 +209,16 @@ void createClock()
     }
 }
 
-void readInputFile(char* inputfile)
+void readInputFile(char *filename)
 {
-    FILE *file = fopen(inputfile, "r");
+    FILE *file = fopen(filename, "r");
     int id, arrivaltime, runtime, priority;
     char line[100];
     fgets(line, sizeof(line), file);
     while (fscanf(file, "%d\t%d\t%d\t%d\n", &id, &arrivaltime, &runtime, &priority) == 4)
         processesCount++;
     fclose(file);
-    file = fopen(inputfile, "r");
+    file = fopen(filename, "r");
     fgets(line, sizeof(line), file);
     processes = (Process *)malloc(processesCount * sizeof(Process));
     for (int i = 0; i < processesCount; i++)
@@ -223,6 +226,7 @@ void readInputFile(char* inputfile)
         fscanf(file, "%d %d %d %d", &id, &arrivaltime, &runtime, &priority);
         processes[i] = _createProcess(id, arrivaltime, runtime, priority);
     }
+    fclose(file);
 }
 
 Process _createProcess(int id, int arrivalTime, int runTime, int priority)
