@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     timeQuantum = atoi(argv[2]); // 1 -> HPF, 2 -> SRTN, 3 -> RR
     runningProcessSRTN = &runningProcess;
     *runningProcessSRTN = NULL;
-    PCBTable = malloc(totalProcesses * sizeof(Process *));
+    PCBTable = malloc((totalProcesses + 1 ) * sizeof(Process *));
 
     printf("Scheduler started with arguments: (%d, %d, %d)\n", algorithm, timeQuantum, totalProcesses);
     msgq_id1 = getMessageQueueID("pgen_sch_keyfile", 65);
@@ -110,7 +110,6 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-// no longer 3arf eh lazmet el function de
 void switchProcess(Process **runningProcess, Process *p)
 {
     bool firstTime = false;
