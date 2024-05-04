@@ -134,8 +134,11 @@ void SRTN()
             // while (time == getClk())
             //     ;
             time = getClk();
-            if ((*runningProcessSRTN) != getMin(readyQueue))
+            dynamicProcess p = getMin(readyQueue);
+            if ((*runningProcessSRTN) != p)
             {
+                if(p == NULL)
+                    continue;
                 if ((*runningProcessSRTN) == NULL)
                     printf("There is no running process right now.\n");
                 else
@@ -145,7 +148,10 @@ void SRTN()
                     (*runningProcessSRTN)->remainingTime = *schedulerProcessSharedMemoryAddress;
                     writeToLogFile((*runningProcessSRTN)->state);
                     kill((*runningProcessSRTN)->pid, SIGSTOP);
+
                 }
+                if(getMin(readyQueue) == NULL)
+                    continue;
                 (*runningProcessSRTN) = getMin(readyQueue);
                 (*runningProcessSRTN)->waitingTime += time - (*runningProcessSRTN)->lastStoppedTime;
                 if ((*runningProcessSRTN)->state == STOPPED)
