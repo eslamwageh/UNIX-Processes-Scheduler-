@@ -30,6 +30,7 @@ Node* createNode (int memoryValue,int id){
     // 4.2 if it is not NULL then make a recursive call to the left child of the root node
 
 bool inserted = false;
+bool deleted = false;
 
 void insertProcess (Node* root, Node* node){
     if(root == NULL){
@@ -75,7 +76,39 @@ void insertProcess (Node* root, Node* node){
 
 }
 
+// 1. get to the node with the id
+// 3. check if sibling is empty
+    // 3.1 if it is empty then delete the node and its sibling
+    // 3.2 if they are not empty then set the node id to -1 and value to ceiled value and return
+void deleteProcess(Node* root, int id){
+    if(root == NULL){
+        // printf("Root is NULL\n");
+        return;
+    }
+    if(root->id == id){
+        printf("Found the node with id: %d\n",id);
+        root->id = -1;
+        root->value = root->parent->ceiledValue/2;
+        return;
+    }
+    deleteProcess(root->left,id);
+    deleteProcess(root->right,id);
+    if(deleted){
+        return;
+    }
+    if(root->left && root->right && root->left->id == -1 && root->right->id == -1){
+        free(root->left);
+        free(root->right);
+        root->id = -1;
+        root->right = NULL;
+        root->left = NULL;
+        return;
+    }
+    if(root->left && root->right){
+        deleted = true;
+    }
 
+}
 
 void printSpaces(int count) {
     for (int i = 0; i < count; i++) {
@@ -113,7 +146,6 @@ int main(){
     inserted = false;
     insertProcess(root,node);
     inserted = false;
-    print2D(root,0);
     Node* node2 = createNode(63,2);
     insertProcess(root,node2);
     inserted = false;
@@ -124,8 +156,20 @@ int main(){
     insertProcess(root,node4);
     print2D(root,0);
 
-    //deleteProcess(root,1);
+    deleteProcess(root,1);
+    deleted = false;
     print2D(root,0);
+    deleteProcess(root,2);
+    deleted = false;
+    print2D(root,0);
+    deleteProcess(root,4);
+    deleted = false;
+    print2D(root,0);
+    deleteProcess(root,3);
+    deleted = false;
+    print2D(root,0);
+
+
 
     return 0;
 }
