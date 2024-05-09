@@ -28,7 +28,6 @@ Node* createNode (int memoryValue,int id){
 // 4. if the cield value of the process is less than the value of the root node then you have to check if the left child of the root node is NULL or not
     // 4.1 if it is NULL then you have to create a new node with the value of the process and set it as the left child of the root node and also set the right child of the root node to the value of the root node divided by 2
     // 4.2 if it is not NULL then make a recursive call to the left child of the root node
-
 bool inserted = false;
 bool deleted = false;
 
@@ -110,6 +109,14 @@ void deleteProcess(Node* root, int id){
     // we have to make sure that the node has children and we stopped because of them being busy not because they don't exist.
     if (root->left && root->right) {
         deleted = true;
+    }
+}
+
+void writeToMemoryLog(Node* node, FILE* file, int state, int time){
+    if(state == ALLOCATED){
+        fprintf(file,"At time %d allocated %d bytes for process %d from %d to %d\n", time, node->value, node->id, node->start, node->end);
+    }else{
+        fprintf(file,"At time %d freed %d bytes from process %d from %d to %d\n", time, node->value, node->id, node->start, node->end);
     }
 }
 
