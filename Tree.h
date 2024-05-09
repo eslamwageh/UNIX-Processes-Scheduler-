@@ -25,4 +25,4 @@ void insertProcess(Node*,Node*);
 void deleteProcess(int);
 
 
-Node* root = NULL;
+//Node* root = NULL;

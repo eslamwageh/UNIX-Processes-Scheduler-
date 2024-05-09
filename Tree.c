@@ -32,26 +32,33 @@ Node* createNode (int memoryValue,int id){
 bool inserted = false;
 
 void insertProcess (Node* root,Node* node){
-    if(inserted){
-        return;
-    }
     if(root == NULL){
         root = node;
+        // printf("Root is NULL\n");
+        return;
+    }
+    
+    if(inserted || node->ceiledValue > root->ceiledValue){
+        // printf("Inserted or Ceiled Value is greater, current node id: %d\n",node->id);
         return;
     }
     
     if(node->ceiledValue == root->ceiledValue){
         if(root->id == -1){
+            // printf("Root id is -1, current node id: %d\n",node->id);
             root->id = node->id;
             root->value = node->value;
             inserted = true;
+            free(node);
             return;
         }
         else{
+            // printf("Root id is not -1, current node id: %d\n",node->id);
             return;
         }
     }else if(node->ceiledValue < root->ceiledValue){
-        if(root->left == NULL){
+        if(root->id == -1 && root->left == NULL){
+            // printf("Root has no children, current node id: %d\n",node->id);
             Node* newNode = createNode(root->ceiledValue/2,-1);
             newNode->parent = root;
             root->left = newNode;
@@ -60,15 +67,60 @@ void insertProcess (Node* root,Node* node){
             root->right = rightNode;
         }
     }
-
+    // printf("Making recursive call, current node id: %d\n",node->id);
+    // printf("Root value: %d\n",root->value);
     insertProcess(root->left,node);
     insertProcess(root->right,node);
     
 
 }
 
+void printSpaces(int count) {
+    for (int i = 0; i < count; i++) {
+        printf("  ");
+    }
+}
+
+void print2D(struct Node* root, int space)
+{
+    // Base case
+    if (root == NULL)
+        return;
+ 
+    // Increase distance between levels
+    space += 10;
+ 
+    // Process right child first
+    print2D(root->right, space);
+ 
+    // Print current node after space
+    // count
+    printf("\n");
+    for (int i = 10; i < space; i++)
+        printf(" ");
+    printf("%d\n", root->value);
+ 
+    // Process left child
+    print2D(root->left, space);
+}
 
 int main(){
-    printf("%d\n",ceilLog2(65));
+    Node* root = createNode(MAX_MEMORY,-1);
+    insertProcess(NULL,root);
+    Node* node = createNode(63,1);
+    inserted = false;
+    insertProcess(root,node);
+    inserted = false;
+    Node* node2 = createNode(63,2);
+    insertProcess(root,node2);
+    inserted = false;
+    Node* node3 = createNode(31,3);
+    insertProcess(root,node3);
+    inserted = false;
+    Node* node4 = createNode(15,4);
+    insertProcess(root,node4);
+
+    print2D(root,0);
+
     return 0;
 }
