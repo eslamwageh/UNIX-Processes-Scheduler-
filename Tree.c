@@ -61,9 +61,13 @@ void insertProcess (Node* root, Node* node){
             // printf("Root has no children, current node id: %d\n",node->id);
             Node* newNode = createNode(root->ceiledValue/2,-1);
             newNode->parent = root;
+            newNode->start = root->start;
+            newNode->end = root->start + newNode->ceiledValue -1;
             root->left = newNode;
             Node* rightNode = createNode(root->ceiledValue/2,-1);
             rightNode->parent = root;
+            rightNode->start = newNode->end + 1;
+            rightNode->end = rightNode->start + rightNode->ceiledValue -1;
             root->right = rightNode;
         }
     }
