@@ -31,7 +31,7 @@ Node* createNode (int memoryValue,int id){
 
 bool inserted = false;
 
-void insertProcess (Node* root,Node* node){
+void insertProcess (Node* root, Node* node){
     if(root == NULL){
         root = node;
         // printf("Root is NULL\n");
@@ -44,7 +44,7 @@ void insertProcess (Node* root,Node* node){
     }
     
     if(node->ceiledValue == root->ceiledValue){
-        if(root->id == -1){
+        if(root->id == -1 && root->left == NULL && root->right == NULL){
             // printf("Root id is -1, current node id: %d\n",node->id);
             root->id = node->id;
             root->value = node->value;
@@ -74,6 +74,8 @@ void insertProcess (Node* root,Node* node){
     
 
 }
+
+
 
 void printSpaces(int count) {
     for (int i = 0; i < count; i++) {
@@ -107,10 +109,11 @@ void print2D(struct Node* root, int space)
 int main(){
     Node* root = createNode(MAX_MEMORY,-1);
     insertProcess(NULL,root);
-    Node* node = createNode(63,1);
+    Node* node = createNode(7,1);
     inserted = false;
     insertProcess(root,node);
     inserted = false;
+    print2D(root,0);
     Node* node2 = createNode(63,2);
     insertProcess(root,node2);
     inserted = false;
@@ -119,7 +122,9 @@ int main(){
     inserted = false;
     Node* node4 = createNode(15,4);
     insertProcess(root,node4);
+    print2D(root,0);
 
+    //deleteProcess(root,1);
     print2D(root,0);
 
     return 0;

@@ -22,7 +22,7 @@ Node* createNode(int,int);
 
 void insertProcess(Node*,Node*);
 
-void deleteProcess(int);
+void deleteProcess(Node*, int);
 
 
 //Node* root = NULL;
