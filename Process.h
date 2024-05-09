@@ -13,6 +13,7 @@ typedef struct Process
   int waitingTime;
   int lastStoppedTime;
   int state; // 0: started, 1: stopped, 2: resumed, 3: finished
+  int memsize;
 } Process;
 
 typedef enum Algorithm

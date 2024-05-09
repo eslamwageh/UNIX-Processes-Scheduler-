@@ -20,7 +20,7 @@ int schedPid;
 Process *processes;
 
 void readInputFile();
-Process _createProcess(int id, int arrivalTime, int runTime, int priority);
+Process _createProcess(int id, int arrivalTime, int runTime, int priority, int memsize);
 void sendProcessToScheduler(Process p);
 void getUserInput(int *algorithm, int *parameter);
 void createScheduler(int algorithm, int parameter);
@@ -211,10 +211,10 @@ void createClock()
 void readInputFile()
 {
     FILE *file = fopen("PROCESSES", "r");
-    int id, arrivaltime, runtime, priority;
+    int id, arrivaltime, runtime, priority, memsize;
     char line[100];
     fgets(line, sizeof(line), file);
-    while (fscanf(file, "%d\t%d\t%d\t%d\n", &id, &arrivaltime, &runtime, &priority) == 4)
+    while (fscanf(file, "%d\t%d\t%d\t%d\t%d\n", &id, &arrivaltime, &runtime, &priority, &memsize) == 4)
         processesCount++;
     fclose(file);
     file = fopen("PROCESSES", "r");
@@ -222,13 +222,13 @@ void readInputFile()
     processes = (Process *)malloc(processesCount * sizeof(Process));
     for (int i = 0; i < processesCount; i++)
     {
-        fscanf(file, "%d %d %d %d", &id, &arrivaltime, &runtime, &priority);
-        processes[i] = _createProcess(id, arrivaltime, runtime, priority);
+        fscanf(file, "%d %d %d %d %d", &id, &arrivaltime, &runtime, &priority, &memsize);
+        processes[i] = _createProcess(id, arrivaltime, runtime, priority, memsize);
     }
     fclose(file);
 }
 
-Process _createProcess(int id, int arrivalTime, int runTime, int priority)
+Process _createProcess(int id, int arrivalTime, int runTime, int priority, int memsize)
 {
     Process p;
     p.id = id;
@@ -241,5 +241,6 @@ Process _createProcess(int id, int arrivalTime, int runTime, int priority)
     p.pid = -1;
     p.priority = priority;
     p.lastStoppedTime = arrivalTime;
+    p.memsize = memsize;
     return p;
 }
