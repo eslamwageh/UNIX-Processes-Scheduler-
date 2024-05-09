@@ -76,27 +76,29 @@ void insertProcess (Node* root, Node* node){
 
 }
 
-// 1. get to the node with the id
-// 3. check if sibling is empty
-    // 3.1 if it is empty then delete the node and its sibling
-    // 3.2 if they are not empty then set the node id to -1 and value to ceiled value and return
+// 1. traverse the tree to find the node with the specified ID.
+// 2. once the node is found:
+    // 2.1. if both of its children are empty delete the node along with its sibling.
+    // 2.2. if the children are not empty, mark the node as deleted by setting its ID to -1 and its value to half of its parent's ceiling value.
 void deleteProcess(Node* root, int id){
     if(root == NULL){
-        // printf("Root is NULL\n");
         return;
     }
     if(root->id == id){
-        printf("Found the node with id: %d\n",id);
-        root->id = -1;
-        root->value = root->parent->ceiledValue/2;
+        // if the current node's ID matches the target ID, it's the node to delete.
+        printf("Found the node with id: %d\n", id);
+        root->id = -1; // resetting the ID to -1 to mark it as deleted.
+        root->value = root->parent->ceiledValue / 2; // resetting value to half of parent's ceiling value.
+        return; // exit the function after deleting the node.
+    }
+    deleteProcess(root->left, id);
+    deleteProcess(root->right, id);
+    // if the node was already deleted during recursive calls, no further action is needed.
+    if (deleted) {
         return;
     }
-    deleteProcess(root->left,id);
-    deleteProcess(root->right,id);
-    if(deleted){
-        return;
-    }
-    if(root->left && root->right && root->left->id == -1 && root->right->id == -1){
+    // if both children of the current node are empty, delete them and mark the current node as deleted.
+    if (root->left && root->right && root->left->id == -1 && root->right->id == -1) {
         free(root->left);
         free(root->right);
         root->id = -1;
@@ -104,11 +106,13 @@ void deleteProcess(Node* root, int id){
         root->left = NULL;
         return;
     }
-    if(root->left && root->right){
+    // the first time we find a node that has a child we set deleted to true to stop the deletion.
+    // we have to make sure that the node has children and we stopped because of them being busy not because they don't exist.
+    if (root->left && root->right) {
         deleted = true;
     }
-
 }
+
 
 void printSpaces(int count) {
     for (int i = 0; i < count; i++) {
