@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     timeQuantum = atoi(argv[2]); // 1 -> HPF, 2 -> SRTN, 3 -> RR
     runningProcessSRTN = &runningProcess;
     *runningProcessSRTN = NULL;
-    PCBTable = malloc((totalProcesses + 1 ) * sizeof(Process *));
+    PCBTable = malloc((totalProcesses + 1) * sizeof(Process *));
 
     printf("Scheduler started with arguments: (%d, %d, %d)\n", algorithm, timeQuantum, totalProcesses);
     msgq_id1 = getMessageQueueID("pgen_sch_keyfile", 65);
@@ -136,7 +136,7 @@ void SRTN()
             dynamicProcess p = getMin(readyQueue);
             if ((*runningProcessSRTN) != p)
             {
-                if(p == NULL)
+                if (p == NULL)
                     continue;
                 if ((*runningProcessSRTN) == NULL)
                     printf("There is no running process right now.\n");
@@ -147,9 +147,8 @@ void SRTN()
                     (*runningProcessSRTN)->remainingTime = *schedulerProcessSharedMemoryAddress;
                     writeToLogFile((*runningProcessSRTN)->state);
                     kill((*runningProcessSRTN)->pid, SIGSTOP);
-
                 }
-                if(getMin(readyQueue) == NULL)
+                if (getMin(readyQueue) == NULL)
                     continue;
                 (*runningProcessSRTN) = getMin(readyQueue);
                 (*runningProcessSRTN)->waitingTime += time - (*runningProcessSRTN)->lastStoppedTime;
@@ -368,9 +367,9 @@ void writeToLogFile(int state)
         fprintf(logFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", p->lastStoppedTime, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime);
         break;
     case 2:
-        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime, time - p->arrivalTime, (float)(time - p->arrivalTime) / p->runTime);
-        totalWTA += (float)(time - (p)->arrivalTime) / (p)->runTime;
-        totalWTA2 += pow((float)(time - (p)->arrivalTime) / (p)->runTime, 2);
+        fprintf(logFile, "At time %d process %d finished arr %d total %d remain %d wait %d TA %d WTA %f\n", time, p->id, p->arrivalTime, p->runTime, p->remainingTime, p->waitingTime, time - p->arrivalTime, (p->runTime != 0) ? (float)(time - (p)->arrivalTime) / (p)->runTime : 0);
+        totalWTA += (p->runTime != 0) ? (float)(time - (p)->arrivalTime) / (p)->runTime : 0;
+        totalWTA2 += (p->runTime != 0) ? (pow((float)(time - (p)->arrivalTime) / (p)->runTime, 2)) : 0;
         totalWaitingTime += (p)->waitingTime;
         break;
     }
