@@ -214,7 +214,7 @@ void readInputFile()
     int id, arrivaltime, runtime, priority, memsize;
     char line[100];
     fgets(line, sizeof(line), file);
-    while (fscanf(file, "%d\t%d\t%d\t%d\t%d\n", &id, &arrivaltime, &runtime, &priority, &memsize) == 4)
+    while (fscanf(file, "%d\t%d\t%d\t%d\t%d\n", &id, &arrivaltime, &runtime, &priority, &memsize) == 5)
         processesCount++;
     fclose(file);
     file = fopen("PROCESSES", "r");
