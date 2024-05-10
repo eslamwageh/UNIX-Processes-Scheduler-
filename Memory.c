@@ -1,4 +1,4 @@
-#include "Tree.h"
+#include "Memory.h"
 
 int ceilLog2(int n)
 {
@@ -9,6 +9,18 @@ int ceilLog2(int n)
         count++;
     }
     return 1 << count;
+}
+
+void writeToMemoryLog(Node *node, FILE *file, int state, int time)
+{
+    if (state == ALLOCATED)
+    {
+        fprintf(file, "At time %d allocated %d bytes for process %d from %d to %d\n", time, node->value, node->id, node->start, node->end);
+    }
+    else
+    {
+        fprintf(file, "At time %d freed %d bytes from process %d from %d to %d\n", time, node->value, node->id, node->start, node->end);
+    }
 }
 
 Node *createNode(int memoryValue, int id)
@@ -35,7 +47,7 @@ bool deleted = false;
 int currentTime = 0;
 FILE *currentFile = NULL;
 
-void insertProcess(Node *root, Node *node)
+void insertProcessMemory(Node *root, Node *node)
 {
     if (root == NULL)
     {
@@ -86,15 +98,15 @@ void insertProcess(Node *root, Node *node)
     }
     // printf("Making recursive call, current node id: %d\n",node->id);
     // printf("Root value: %d\n",root->value);
-    insertProcess(root->left, node);
-    insertProcess(root->right, node);
+    insertProcessMemory(root->left, node);
+    insertProcessMemory(root->right, node);
 }
 
 // 1. traverse the tree to find the node with the specified ID.
 // 2. once the node is found:
 // 2.1. if both of its children are empty delete the node along with its sibling.
 // 2.2. if the children are not empty, mark the node as deleted by setting its ID to -1 and its value to half of its parent's ceiling value.
-void deleteProcess(Node *root, int id)
+void deleteProcessMemory(Node *root, int id)
 {
     if (root == NULL)
     {
@@ -109,8 +121,8 @@ void deleteProcess(Node *root, int id)
         root->value = root->parent->ceiledValue / 2; // resetting value to half of parent's ceiling value.
         return;                                      // exit the function after deleting the node.
     }
-    deleteProcess(root->left, id);
-    deleteProcess(root->right, id);
+    deleteProcessMemory(root->left, id);
+    deleteProcessMemory(root->right, id);
     // if the node was already deleted during recursive calls, no further action is needed.
     if (deleted)
     {
@@ -131,18 +143,6 @@ void deleteProcess(Node *root, int id)
     if (root->left && root->right)
     {
         deleted = true;
-    }
-}
-
-void writeToMemoryLog(Node *node, FILE *file, int state, int time)
-{
-    if (state == ALLOCATED)
-    {
-        fprintf(file, "At time %d allocated %d bytes for process %d from %d to %d\n", time, node->value, node->id, node->start, node->end);
-    }
-    else
-    {
-        fprintf(file, "At time %d freed %d bytes from process %d from %d to %d\n", time, node->value, node->id, node->start, node->end);
     }
 }
 
@@ -180,7 +180,7 @@ void print2D(struct Node *root, int space)
 void insertProcessWrapper(Node *root, FILE *file, int id, int memSize, int time)
 {
     Node *newNode = createNode(memSize, id);
-    insertProcess(root, newNode);
+    insertProcessMemory(root, newNode);
     inserted = false;
     writeToMemoryLog(newNode, file, ALLOCATED, time);
 }
@@ -189,45 +189,45 @@ void deleteProcessWrapper(Node *root, FILE *file, int id, int time)
 {
     currentTime = time;
     currentFile = file;
-    deleteProcess(root, id);
+    deleteProcessMemory(root, id);
     deleted = false;
 }
 
 Node *initMemory()
 {
     Node *root = createNode(MAX_MEMORY, -1);
-    insertProcess(NULL, root);
+    insertProcessMemory(NULL, root);
     return root;
 }
 
 int main()
 {
     Node *root = createNode(MAX_MEMORY, -1);
-    insertProcess(NULL, root);
+    insertProcessMemory(NULL, root);
     Node *node = createNode(7, 1);
     inserted = false;
-    insertProcess(root, node);
+    insertProcessMemory(root, node);
     inserted = false;
     Node *node2 = createNode(63, 2);
-    insertProcess(root, node2);
+    insertProcessMemory(root, node2);
     inserted = false;
     Node *node3 = createNode(31, 3);
-    insertProcess(root, node3);
+    insertProcessMemory(root, node3);
     inserted = false;
     Node *node4 = createNode(15, 4);
-    insertProcess(root, node4);
+    insertProcessMemory(root, node4);
     print2D(root, 0);
 
-    deleteProcess(root, 1);
+    deleteProcessMemory(root, 1);
     deleted = false;
     print2D(root, 0);
-    deleteProcess(root, 2);
+    deleteProcessMemory(root, 2);
     deleted = false;
     print2D(root, 0);
-    deleteProcess(root, 4);
+    deleteProcessMemory(root, 4);
     deleted = false;
     print2D(root, 0);
-    deleteProcess(root, 3);
+    deleteProcessMemory(root, 3);
     deleted = false;
     print2D(root, 0);
 

@@ -4,6 +4,7 @@
 #include "MinHeap.h"
 #include <stddef.h>
 #include "stdlib.h"
+#include "Memory.h"
 
 int time;
 int algorithm;
@@ -23,11 +24,13 @@ int totalProcesses = 0;
 int totalProcessesFinished = 0;
 int totalExecutionTime = 0;
 FILE *logFile;
+FILE *memoryLogFile;
 Process **runningProcessSRTN;
 Process **PCBTable;
 Process *runningProcess;
 priority_queue *readyQueue = NULL;
 PriorityQueuePointer rrReadyQueue;
+MemoryHead memory;
 
 typedef struct msgbuff
 {
@@ -56,7 +59,9 @@ int main(int argc, char *argv[])
     signal(SIGCONT, finishedQuantum);
 
     initClk();
+    memory = initMemory();
     logFile = fopen("scheduler.log", "w");
+    memoryLogFile = fopen("memory.log", "w");
     time = -1;
     // TODO implement the scheduler :)
     totalProcesses = atoi(argv[3]);
@@ -137,7 +142,7 @@ void SRTN()
             dynamicProcess p = getMin(readyQueue);
             if ((*runningProcessSRTN) != p)
             {
-                if(p == NULL)
+                if (p == NULL)
                     continue;
                 if ((*runningProcessSRTN) == NULL)
                     printf("There is no running process right now.\n");
@@ -148,9 +153,8 @@ void SRTN()
                     (*runningProcessSRTN)->remainingTime = *schedulerProcessSharedMemoryAddress;
                     writeToLogFile((*runningProcessSRTN)->state);
                     kill((*runningProcessSRTN)->pid, SIGSTOP);
-
                 }
-                if(getMin(readyQueue) == NULL)
+                if (getMin(readyQueue) == NULL)
                     continue;
                 (*runningProcessSRTN) = getMin(readyQueue);
                 (*runningProcessSRTN)->waitingTime += time - (*runningProcessSRTN)->lastStoppedTime;
@@ -335,6 +339,8 @@ void receiveProcess(int signum)
             break;
         }
 
+        insertProcessWrapper(memory, memoryLogFile, p->id, p->memsize, getClk());
+
         // print ready queue content
         // if (rrReadyQueue->Count == 5)
         //     for (int i = 0; !priority_queue_empty(rrReadyQueue); i++)
@@ -386,6 +392,7 @@ void processFinishedHandler(int signum)
     runningProcess->remainingTime = 0;
     time = getClk();
     writeToLogFile(2);
+    deleteProcessWrapper(memory, memoryLogFile, runningProcess->id, time);
     deleteProcess();
     signal(SIGTSTP, processFinishedHandler);
 }
