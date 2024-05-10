@@ -116,3 +116,16 @@ Process *priority_queue_remove(PriorityQueuePointer PQ)
         return Item;   // Return the item
     }
 }
+
+Process *peek(PriorityQueuePointer PQ)
+{
+    if (priority_queue_empty(PQ))
+    {
+        printf("Cannot show an item from empty priority queue.\n"); // If the priority queue is empty, print error message
+        return NULL;
+    }
+    else
+    {
+        return PQ->ItemList->Item;
+    }
+}

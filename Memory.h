@@ -30,9 +30,9 @@ Node *initMemory();
 int ceilLog2(int n);
 void writeToMemoryLog(Node *node, FILE *file, int state, int time);
 Node *createNode(int memoryValue, int id);
-void insertProcessMemory(Node *root, Node *node);
+bool insertProcessMemory(Node *root, Node *node);
 void deleteProcessMemory(Node *root, int id);
-void insertProcessWrapper(Node *, FILE *file, int, int, int);
+bool insertProcessWrapper(Node *, FILE *file, int, int, int);
 void deleteProcessWrapper(Node *, FILE *file, int, int);
 void printSpaces(int count);
 void print2D(struct Node *root, int space);
@@ -84,19 +84,19 @@ bool deleted = false;
 int currentTime = 0;
 FILE *currentFile = NULL;
 
-void insertProcessMemory(Node *root, Node *node)
+bool insertProcessMemory(Node *root, Node *node)
 {
     if (root == NULL)
     {
         root = node;
         // printf("Root is NULL\n");
-        return;
+        return false;
     }
 
     if (inserted || node->ceiledValue > root->ceiledValue)
     {
         // printf("Inserted or Ceiled Value is greater, current node id: %d\n",node->id);
-        return;
+        return false;
     }
 
     if (node->ceiledValue == root->ceiledValue)
@@ -109,12 +109,12 @@ void insertProcessMemory(Node *root, Node *node)
             inserted = true;
             node->start = root->start;
             node->end = root->end;
-            return;
+            return true;
         }
         else
         {
             // printf("Root id is not -1, current node id: %d\n",node->id);
-            return;
+            return false;
         }
     }
     else if (node->ceiledValue < root->ceiledValue)
@@ -136,8 +136,7 @@ void insertProcessMemory(Node *root, Node *node)
     }
     // printf("Making recursive call, current node id: %d\n",node->id);
     // printf("Root value: %d\n",root->value);
-    insertProcessMemory(root->left, node);
-    insertProcessMemory(root->right, node);
+    return insertProcessMemory(root->left, node) || insertProcessMemory(root->right, node);
 }
 
 // 1. traverse the tree to find the node with the specified ID.
@@ -215,13 +214,16 @@ void print2D(struct Node *root, int space)
     print2D(root->left, space);
 }
 
-void insertProcessWrapper(Node *root, FILE *file, int id, int memSize, int time)
+bool insertProcessWrapper(Node *root, FILE *file, int id, int memSize, int time)
 {
+    bool good = false;
     Node *newNode = createNode(memSize, id);
-    insertProcessMemory(root, newNode);
+    good = insertProcessMemory(root, newNode);
     inserted = false;
-    writeToMemoryLog(newNode, file, ALLOCATED, time);
+    if (good)
+        writeToMemoryLog(newNode, file, ALLOCATED, time);
     free(newNode);
+    return good;
 }
 
 void deleteProcessWrapper(Node *root, FILE *file, int id, int time)

@@ -30,6 +30,7 @@ Process **PCBTable;
 Process *runningProcess;
 priority_queue *readyQueue = NULL;
 PriorityQueuePointer rrReadyQueue;
+PriorityQueuePointer noSpaceProcesses;
 MemoryHead memory;
 
 typedef struct msgbuff
@@ -50,6 +51,7 @@ void receiveProcess(int signum);
 
 void writeToLogFile(int state); // 0 -> runs, 1 -> stops, 2 -> finishes
 void createPerfFile();
+void insertToDataStructures(Process *p);
 
 int main(int argc, char *argv[])
 {
@@ -59,6 +61,7 @@ int main(int argc, char *argv[])
     signal(SIGCONT, finishedQuantum);
 
     initClk();
+    noSpaceProcesses = priority_queue_init();
     memory = initMemory();
     logFile = fopen("scheduler.log", "w");
     memoryLogFile = fopen("memory.log", "w");
@@ -107,6 +110,7 @@ int main(int argc, char *argv[])
     default:
         break;
     }
+
     fclose(logFile);
     createPerfFile();
     destroyClk(false);
@@ -297,6 +301,7 @@ void receiveProcess(int signum)
     msgbuff message;
     int recval = msgrcv(msgq_id1, &message, sizeof(message.msg_process), 0, !IPC_NOWAIT);
     *p = message.msg_process;
+
     if (recval == -1)
     {
         perror("Error in receiving from generator");
@@ -306,40 +311,18 @@ void receiveProcess(int signum)
     {
         printf("recieved with arrival time : %d\n", p->arrivalTime);
         fflush(stdout);
+        bool inserted = insertProcessWrapper(memory, memoryLogFile, p->id, p->memsize, getClk());
+
         totalExecutionTime += p->runTime;
         PCBTable[p->id] = p;
-        switch (algorithm)
+        if (inserted)
         {
-        case 1:
-            pushInHeap(readyQueue, p);
-            printf("pushed in heap\n");
-            fflush(stdout);
-            // printf("minHeap\n");
-            printHeap(readyQueue);
-            break;
-        case 2:
-            if ((*runningProcessSRTN) != NULL)
-            {
-                printf("Value in shared memory is %d\n", *schedulerProcessSharedMemoryAddress);
-                (*runningProcessSRTN)->remainingTime = *schedulerProcessSharedMemoryAddress;
-                printf("------------------------\n");
-                printProcessInfo((*runningProcessSRTN));
-                printf("------------------------\n");
-            }
-            pushInHeap(readyQueue, p);
-            printf("pushed in heap\n");
-            fflush(stdout);
-            printHeap(readyQueue);
-            fflush(stdout);
-            break;
-        case 3:
-            printf("inserting process %d into ready queue\n", p->id);
-            fflush(stdout);
-            insert_into_tail(p, rrReadyQueue);
-            break;
+            insertToDataStructures(p);
         }
-
-        insertProcessWrapper(memory, memoryLogFile, p->id, p->memsize, getClk());
+        else
+        {
+            insert_into_tail(p, noSpaceProcesses);
+        }
 
         // print ready queue content
         // if (rrReadyQueue->Count == 5)
@@ -394,6 +377,15 @@ void processFinishedHandler(int signum)
     writeToLogFile(2);
     deleteProcessWrapper(memory, memoryLogFile, runningProcess->id, time);
     deleteProcess();
+    while (!priority_queue_empty(noSpaceProcesses))
+    {
+        Process *p = peek(noSpaceProcesses);
+        bool inserted = insertProcessWrapper(memory, memoryLogFile, p->id, p->memsize, getClk());
+        if (!inserted)
+            break;
+        p = priority_queue_remove(noSpaceProcesses);
+        insertToDataStructures(p);
+    }
     signal(SIGTSTP, processFinishedHandler);
 }
 
@@ -430,4 +422,38 @@ void finishedQuantum(int signum)
     inQuantum = false;
     runningProcess->remainingTime -= timeQuantum;
     signal(SIGCONT, finishedQuantum);
+}
+
+void insertToDataStructures(Process *p)
+{
+    switch (algorithm)
+    {
+    case 1:
+        pushInHeap(readyQueue, p);
+        printf("pushed in heap\n");
+        fflush(stdout);
+        // printf("minHeap\n");
+        printHeap(readyQueue);
+        break;
+    case 2:
+        if ((*runningProcessSRTN) != NULL)
+        {
+            printf("Value in shared memory is %d\n", *schedulerProcessSharedMemoryAddress);
+            (*runningProcessSRTN)->remainingTime = *schedulerProcessSharedMemoryAddress;
+            printf("------------------------\n");
+            printProcessInfo((*runningProcessSRTN));
+            printf("------------------------\n");
+        }
+        pushInHeap(readyQueue, p);
+        printf("pushed in heap\n");
+        fflush(stdout);
+        printHeap(readyQueue);
+        fflush(stdout);
+        break;
+    case 3:
+        printf("inserting process %d into ready queue\n", p->id);
+        fflush(stdout);
+        insert_into_tail(p, rrReadyQueue);
+        break;
+    }
 }
