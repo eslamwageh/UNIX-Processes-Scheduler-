@@ -84,11 +84,22 @@ bool deleted = false;
 int currentTime = 0;
 FILE *currentFile = NULL;
 
+void getSmallestNode(Node *root, int value, Node **minNode)
+{
+    if (!root)
+        return;
+    if (root && root->ceiledValue >= value && !root->left && (!*minNode || root->ceiledValue < (*minNode)->ceiledValue) && root->id == -1)
+    {
+        *minNode = root;
+    }
+
+    getSmallestNode(root->left, value, minNode);
+    getSmallestNode(root->right, value, minNode);
+}
 bool insertProcessMemory(Node *root, Node *node)
 {
     if (root == NULL)
     {
-        root = node;
         // printf("Root is NULL\n");
         return false;
     }
@@ -218,7 +229,9 @@ bool insertProcessWrapper(Node *root, FILE *file, int id, int memSize, int time)
 {
     bool good = false;
     Node *newNode = createNode(memSize, id);
-    good = insertProcessMemory(root, newNode);
+    Node *minNode = NULL;
+    getSmallestNode(root, memSize, &minNode);
+    good = insertProcessMemory(minNode, newNode);
     inserted = false;
     if (good)
         writeToMemoryLog(newNode, file, ALLOCATED, time);
@@ -237,6 +250,5 @@ void deleteProcessWrapper(Node *root, FILE *file, int id, int time)
 Node *initMemory()
 {
     Node *root = createNode(MAX_MEMORY, -1);
-    insertProcessMemory(NULL, root);
     return root;
 }
